@@ -1,6 +1,8 @@
 //
 // Sample or Demo of Sandcastle job to read old word format 
-// or the new one not XML .. speack ole data stream container.
+// or the new one not XML OpenFormat .. speack ole data stream container.
+// Dear reader this file is the result of hard, hard, hard work from many
+// week .... ok?   Be Careful With My Heart...
 // Author: Peter Hohl <pehohlva@gmail.com>,    24.10.2013
 // http://www.freeroad.ch/
 // Copyright: See COPYING file that comes with this distribution
@@ -18,6 +20,9 @@
 DocModelRead::DocModelRead(const QString chartset)
 : myImageIndex(0), myFootnoteIndex(0) {
     ReaderSession::self(); /// simple start instance
+    /// i see on calligra connect object to send data
+    /// here is a simple xml session to write data to xslt convert all
+    /// on many other format...
     QDomElement head = ReaderSession::self()->createtag("head");
     QDomText txtn = ReaderSession::self()->createTextNode("New document to parse...");
     head.appendChild(txtn);
