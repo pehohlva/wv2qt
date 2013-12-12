@@ -1,0 +1,9 @@
+This is wv2qt-0.4.2, see: http://wvware.sourceforge.net/
+We slightly modified the code to meet our need.
+
+
+Ready to use:
+
+LIBS   += -lz
+LIBS   += -L/opt/icon/lib -liconv -I/opt/icon/include
+LIBS   += -L/opt/icon/lib -lwv2qt -I/opt/icon/include
