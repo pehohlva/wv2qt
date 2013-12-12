@@ -1,13 +1,15 @@
 //
 // Sample or Demo of Sandcastle job to read old word format 
-// or the new one not XML .. speack ole data stream container.
+// or the new one not XML OpenFormat .. speack ole data stream container.
+// Dear reader this file is the result of hard, hard, hard work from many
+// week .... ok?   Be Careful With My Heart...
 // Author: Peter Hohl <pehohlva@gmail.com>,    24.10.2013
 // http://www.freeroad.ch/
 // Copyright: See COPYING file that comes with this distribution
 
 
 #ifndef DOCUMENT_DOC_HANDLER_H
-#define	DOCUMENT_DOC_HANDLER_H
+#define  DOCUMENT_DOC_HANDLER_H
 #include <iostream>
 #include <string>
 #include <QString>
