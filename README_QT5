@@ -1,8 +1,17 @@
 This is wv2qt-0.4.2, see: http://wvware.sourceforge.net/
 We slightly modified the code to meet our need.
 
+To build libs ... take qt5 & cd to wv2qt path
+qmake && make
+at end
+sudo make install
+on error handle this..
 
-Ready to use:
+this static lib only need iconv.. this is deal...  qt having all to manage other item
+on Window .... hmm 
+
+
+Ready to use on project:
 
 LIBS   += -lz
 LIBS   += -L/opt/icon/lib -liconv -I/opt/icon/include
