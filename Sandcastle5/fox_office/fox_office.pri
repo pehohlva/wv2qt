@@ -1,8 +1,7 @@
-## netbean 7.1 follow header 
+## netbean 7.1 follow header use this from  wv5qt.pro
 ## cp -r /opt/icon/include/wv5qt ./
 
 mac {
-## /opt/icon brew install libxml2 / brew install libxslt
 INCLUDEPATH += /opt/icon/include
 INCLUDEPATH += /opt/icon/include/libxml2
 INCLUDEPATH += /opt/icon/include/libxml2/libxml
@@ -22,7 +21,7 @@ DEFINES += HAVING_QTFIVE
   DEFINES += HAVE5ODT
   DEFINES += SUPPORTDOCOK
   DEFINES += HAVE4RTF
-  ## not DEFINES += HAVE5PDF 
+  ## not pdftohtml bad  DEFINES += HAVE5PDF 
   DEFINES += HAVEOLEMICROSOFT
 QT += xmlpatterns
 } else {
@@ -39,9 +38,9 @@ DEFINES += DOCGUIRUN
 INCLUDEPATH += /opt/icon/include
 DEPENDPATH += /opt/icon/include
 
-CONFIG +=   qt warn_off silent debug
+# CONFIG   +=   qt warn_off silent debug
 QT       +=  core xml network gui
-CONFIG +=   qt warn_off silent release
+CONFIG   +=   qt warn_off silent release
 # QTextDocument need gui..
 greaterThan(QT_MAJOR_VERSION, 4) {
 QT += widgets
@@ -49,7 +48,7 @@ QT += widgets
 
 LIBS   += -lz
 LIBS   += -L/opt/icon/lib -liconv -I/opt/icon/include
-LIBS += -L/opt/icon/lib -lwv5qt -I/opt/icon/include
+LIBS   += -L/opt/icon/lib -lwv5qt -I/opt/icon/include
 
 DEPENDSPATH += $$PWD
 INCLUDEPATH += $$PWD
