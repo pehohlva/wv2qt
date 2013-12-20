@@ -12,16 +12,19 @@
 
    You should have received a copy of the GNU Library General Public License
    along with this library; see the file COPYING.LIB.  If not, write to
-   the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
+   the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
    Boston, MA 02111-1307, USA.
 */
 
 #ifndef HEADERS_H
 #define HEADERS_H
 
+//// #include "../../exceptions.h"
+
 #include "global.h"
+#include "wv2_export.h"
 #include <utility>
-#include <vector>
+#include <QList>
 
 namespace wvWare
 {
@@ -38,7 +41,8 @@ namespace wvWare
     class Headers
     {
     public:
-        Headers( U32 fcPlcfhdd, U32 lcbPlcfhdd, OLEStreamReader* tableStream, WordVersion version );
+        Headers( U32 ccpHdd, U32 fcPlcfhdd, U32 lcbPlcfhdd, U32 fcPlcfsed, U32 lcbPlcfsed,
+                 OLEStreamReader* tableStream, WordVersion version );
         virtual ~Headers();
 
         /**
@@ -50,11 +54,18 @@ namespace wvWare
         /**
          * A helper method to implement Word 6 support.
          */
-        virtual void headerMask( U8 sep_grpfIhdt );
+        virtual void set_headerMask( U8 sep_grpfIhdt );
+
+        /**
+         * Returns a binary mask providing the information of empty/nonempty
+         * header and footer stories for each section.  Size of the list equals
+         * the number of sections present in the document.
+         */
+        QList<bool> headersMask( void );
 
     protected:
-        std::vector<U32> m_headers;
-        static const int headerTypes;
+        QList<U32> m_headers;
+        static const uint headerTypes;
     };
 
 } // namespace wvWare

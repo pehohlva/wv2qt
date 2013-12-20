@@ -1,5 +1,5 @@
 /* This file is part of the wvWare 2 project
-   Copyright (C) 2003 KOffice Team
+   Copyright (C) 2003 Calligra Team
    Copyright (C) 2003 Werner Trobin <trobin@kde.org>
 
    This library is free software; you can redistribute it and/or
@@ -13,12 +13,14 @@
 
    You should have received a copy of the GNU Library General Public License
    along with this library; see the file COPYING.LIB.  If not, write to
-   the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
+   the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
    Boston, MA 02111-1307, USA.
 */
 
 #ifndef WV2_VERSION_H
 #define WV2_VERSION_H
+
+// NOTE: Obsolete
 
 #define WV2_VERSION_STRING "0.4.2"
 #define WV2_VERSION_MAJOR 0

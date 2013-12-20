@@ -12,7 +12,7 @@
 
    You should have received a copy of the GNU Library General Public License
    along with this library; see the file COPYING.LIB.  If not, write to
-   the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
+   the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
    Boston, MA 02111-1307, USA.
 */
 
@@ -21,6 +21,7 @@
 
 #include "sharedptr.h"
 #include "global.h"
+#include "wv2_export.h"
 
 namespace wvWare
 {
@@ -42,14 +43,42 @@ struct STTBF;
 class InlineReplacementHandler;
 class SubDocumentHandler;
 class TableHandler;
-class PictureHandler;
 class TextHandler;
+class GraphicsHandler;
 class OLEStorage;
 class OLEStreamReader;
 class StyleSheet;
 class AssociatedStrings;
+class Drawings;
+class Bookmark;
 
-class WV2_DLLEXPORT Parser : public Shared
+/**
+ * This class is the heart of the filter:
+ *<ul>
+ *  <li>
+ *    The layers above it consume the output, primarily using the handlers passed in
+ *    using the setXXXHandler() methods.
+ *  </li>
+ *  <li>
+ *    The layers below handle the specifics of different versions of Word.
+ *  </li>
+ *  <li>
+ *    This layer:
+ *  <ul>
+ *    <li>
+ *        Mostly hides visibility of structures that are specific to any given
+ *        version of Word (a few things like the FIB from Word97 *are* generic enough
+ *        to be used here).
+ *    </li>
+ *    <li>
+ *        Does all the processing during the call to parse(), by calling the provided
+ *        handlers as needed.
+ *    </li>
+ *  </ul>
+ *</li>
+ *</ul>
+ */
+class WV2_EXPORT Parser : public Shared
 {
 public:
     /**
@@ -57,7 +86,7 @@ public:
      * handle footnote references differently while parsing footnotes. It's a bit
      * hacky, but needed.
      */
-    enum SubDocument { None, Main, Footnote, Header, Macro, Annotation, Endnote, TextBox, HeaderTextBox };
+    enum SubDocument { None, Main, Footnote, Header, Macro, Annotation, Endnote, TextBox, HeaderTextBox, Bookmark };
 
     /**
      * Construct a parser. The reason that we get the "open" storage
@@ -97,12 +126,29 @@ public:
      * Not cached, so don't use it like:
      * parser->associatedStrings().author(); parser->associatedStrings().title()...
      */
-    virtual AssociatedStrings associatedStrings() = 0;
+     virtual AssociatedStrings associatedStrings() = 0;
 
     /**
      * This stylesheet holds all the styles inside the Word file
      */
     virtual const StyleSheet& styleSheet() const = 0;
+
+    /**
+     * This Drawings holds all the information about drawings the Word file
+     */
+    virtual const Drawings* getDrawings() const = 0;
+
+    /**
+     * This table holds actuald MS-Doc stream
+     */
+    virtual OLEStreamReader* getTable() = 0;
+
+    /**
+     * Look for textbox text data and process them.
+     * @param index into plcfTxbxTxt
+     * @param processing a header/footer
+     */
+    virtual void parseTextBox(uint index, bool stylesxml) = 0;
 
     /**
      * The inline replacement handler is used to replace certain characters on the fly.
@@ -119,17 +165,18 @@ public:
      * We don't take ownership of the handler!
      */
     void setTableHandler( TableHandler* handler );
-    /**
-     * The picture handler passes the image/drawing data to the consumer.
-     * We don't take ownership of the handler!
-     */
-    void setPictureHandler( PictureHandler* handler );
+
     /**
      * The text handler is the main worker among all handlers. It's used to forward
      * the formatted text to the document, make sure that it's fast.
      * We don't take ownership of the handler!
      */
     void setTextHandler( TextHandler* handler );
+    /**
+     * The graphics handler is used to tell the consumer about MS-ODRAW structures.
+     * We don't take ownership of the handler!
+     */
+    void setGraphicsHandler( GraphicsHandler* handler );
 
     // Do we need public access to parts of the OLEStorage interface?
     // If we add public accessors we should make m_storage private.
@@ -138,13 +185,13 @@ protected:
     InlineReplacementHandler* m_inlineHandler;
     SubDocumentHandler* m_subDocumentHandler;
     TableHandler* m_tableHandler;
-    PictureHandler* m_pictureHandler;
     TextHandler* m_textHandler;
+    GraphicsHandler* m_graphicsHandler;
     bool m_ourInlineHandler;
     bool m_ourSubDocumentHandler;
     bool m_ourTableHandler;
-    bool m_ourPictureHandler;
     bool m_ourTextHandler;
+    bool m_ourGraphicsHandler;
 
     OLEStorage* m_storage;           // The storage representing the file
     OLEStreamReader* m_wordDocument; // document stream ('WordDocument')

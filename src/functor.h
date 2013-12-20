@@ -12,20 +12,22 @@
 
    You should have received a copy of the GNU Library General Public License
    along with this library; see the file COPYING.LIB.  If not, write to
-   the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
+   the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
    Boston, MA 02111-1307, USA.
 */
 
 #ifndef FUNCTOR_H
 #define FUNCTOR_H
 
+#include "wv2_export.h"
+#include "parser9x.h"
 namespace wvWare
 {
     /**
      * FunctorBase is provided to allow polymorphic handling of different
      * types of functors. Use it like the real functor.
      */
-    class FunctorBase
+    class WV2_EXPORT FunctorBase
     {
     public:
         virtual ~FunctorBase() = 0;
@@ -38,7 +40,7 @@ namespace wvWare
      * call operator().
      */
     template<class ParserT, typename Data>
-    class Functor : public FunctorBase
+    class WV2_EXPORT Functor : public FunctorBase
     {
     public:
         typedef void (ParserT::*F)( const Data& );
@@ -54,7 +56,7 @@ namespace wvWare
     };
 
     /**
-     * A small helper function to avoid unnecessary uglyness in the template
+     * A small helper function to avoid unnecessary ugliness in the template
      * creation code. The function figures out the types and we don't have to
      * specify them explicitly every time we create a functor.
      */

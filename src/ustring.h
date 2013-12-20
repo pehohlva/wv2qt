@@ -15,14 +15,14 @@
  *
  *  You should have received a copy of the GNU Library General Public License
  *  along with this library; see the file COPYING.LIB.  If not, write to
- *  the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
+ *  the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
  *  Boston, MA 02111-1307, USA.
  */
 
 #ifndef _KJS_USTRING_H_
 #define _KJS_USTRING_H_
 
-#include "dllmagic.h"
+#include "wv2_export.h"
 
 namespace wvWare {
 
@@ -113,9 +113,9 @@ namespace wvWare {
    * </pre>
    *
    * If that sounds confusing your best bet is to simply forget about the
-   * existance of this class and treat is as being identical to @ref UChar.
+   * existence of this class and treat is as being identical to @ref UChar.
    */
-  class UCharReference {
+  class WV2_EXPORT UCharReference {
     friend class UString;
     UCharReference(UString *s, unsigned int off) : str(s), offset(off) { }
   public:
@@ -159,7 +159,7 @@ namespace wvWare {
   /**
    * @short 8 bit char based string class
    */
-  class CString {
+  class WV2_EXPORT CString {
   public:
     CString() : data(0L) { }
     explicit CString(const char *c);
@@ -181,7 +181,7 @@ namespace wvWare {
   /**
    * @short Unicode string class
    */
-  class WV2_DLLEXPORT UString {
+  class WV2_EXPORT UString {
     friend bool operator==(const UString&, const UString&);
     friend class UCharReference;
     friend class UConstString;
@@ -333,12 +333,12 @@ namespace wvWare {
      */
     unsigned long toULong(bool *ok = 0L) const;
     /**
-     * @return Position of first occurence of f starting at position pos.
+     * @return Position of first occurrence of f starting at position pos.
      * -1 if the search was not successful.
      */
     int find(const UString &f, int pos = 0) const;
     /**
-     * @return Position of first occurence of f searching backwards from
+     * @return Position of first occurrence of f searching backwards from
      * position pos.
      * -1 if the search was not successful.
      */

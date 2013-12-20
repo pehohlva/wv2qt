@@ -12,7 +12,7 @@
 
    You should have received a copy of the GNU Library General Public License
    along with this library; see the file COPYING.LIB.  If not, write to
-   the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
+   the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
    Boston, MA 02111-1307, USA.
 */
 
@@ -20,6 +20,7 @@
 #include "parser9x.h"
 #include "paragraphproperties.h"
 #include "functor.h"
+#include "wvlog.h"
 
 using namespace wvWare;
 
@@ -62,6 +63,10 @@ SubDocumentHandler::~SubDocumentHandler()
 {
 }
 
+void SubDocumentHandler::setProgress( const int /*value*/ )
+{
+}
+
 void SubDocumentHandler::bodyStart()
 {
 }
@@ -78,11 +83,24 @@ void SubDocumentHandler::footnoteEnd()
 {
 }
 
+void SubDocumentHandler::annotationStart()
+{
+}
+
+void SubDocumentHandler::annotationEnd()
+{
+}
+
+
 void SubDocumentHandler::headersStart()
 {
 }
 
 void SubDocumentHandler::headersEnd()
+{
+}
+
+void SubDocumentHandler::headersMask( QList<bool> /*mask*/ )
 {
 }
 
@@ -93,7 +111,6 @@ void SubDocumentHandler::headerStart( HeaderData::Type /*type*/ )
 void SubDocumentHandler::headerEnd()
 {
 }
-
 
 TableHandler::~TableHandler()
 {
@@ -115,31 +132,20 @@ void TableHandler::tableCellEnd()
 {
 }
 
-
-PictureHandler::~PictureHandler()
+GraphicsHandler::~GraphicsHandler()
 {
+
 }
 
-void PictureHandler::bitmapData( OLEImageReader& /*reader*/, SharedPtr<const Word97::PICF> /*picf*/ )
+void GraphicsHandler::handleFloatingObject(unsigned int /*globalCP*/)
 {
+
 }
 
-void PictureHandler::escherData( OLEImageReader& /*reader*/, SharedPtr<const Word97::PICF> /*picf*/, int type )
+QString GraphicsHandler::handleInlineObject(const PictureData& /*data*/, const bool /*isBulletPicture*/)
 {
+    return QString();
 }
-
-void PictureHandler::escherData( std::vector<U8>, SharedPtr<const Word97::PICF> /*picf*/, int type )
-{
-}
-
-void PictureHandler::wmfData( OLEImageReader& /*reader*/, SharedPtr<const Word97::PICF> /*picf*/ )
-{
-}
-
-void PictureHandler::externalImage( const UString& /*name*/, SharedPtr<const Word97::PICF> /*picf*/ )
-{
-}
-
 
 TextHandler::~TextHandler()
 {
@@ -162,7 +168,7 @@ void TextHandler::headersFound( const HeaderFunctor& parseHeaders )
     parseHeaders();
 }
 
-void TextHandler::paragraphStart( SharedPtr<const ParagraphProperties> /*paragraphProperties*/ )
+void TextHandler::paragraphStart( SharedPtr<const ParagraphProperties> /*paragraphProperties*/, SharedPtr<const Word97::CHP> /*chp*/ )
 {
 }
 
@@ -178,13 +184,30 @@ void TextHandler::specialCharacter( SpecialCharacter /*character*/, SharedPtr<co
 {
 }
 
-void TextHandler::footnoteFound( FootnoteData::Type /*type*/, UChar character,
-                                 SharedPtr<const Word97::CHP> chp, const FootnoteFunctor& parseFootnote )
+void TextHandler::footnoteFound( FootnoteData /*data*/, UString characters,
+                                 SharedPtr<const Word97::SEP> /*sep*/,
+                                 SharedPtr<const Word97::CHP> chp,
+                                 const FootnoteFunctor& parseFootnote)
 {
-    if ( character.unicode() != 2 )
-        runOfText( UString( character ), chp ); // The character shouldn't get lost unless it's the auto-number
+    if ( characters[0].unicode() != 2 )
+        runOfText( characters, chp ); // The character shouldn't get lost unless it's the auto-number
     parseFootnote();
 }
+
+void TextHandler::annotationFound( UString characters,
+                                   SharedPtr<const Word97::CHP> chp, const AnnotationFunctor& parseAnnotation)
+{
+#ifdef WV_DEBUG_ANNOTATIONS
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"TextHandler::annotationFound: ";
+    for (int i = 0; i < characters.length(); ++i) {
+        wvlog << __FILE__ << ":" << __LINE__ << " - " <<characters[i].unicode();
+    }
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<endl;
+#endif
+    runOfText(characters, chp);
+    parseAnnotation();
+}
+
 
 void TextHandler::footnoteAutoNumber( SharedPtr<const Word97::CHP> /*chp*/ )
 {
@@ -207,8 +230,19 @@ void TextHandler::tableRowFound( const TableRowFunctor& tableRow, SharedPtr<cons
     tableRow();
 }
 
-void TextHandler::pictureFound( const PictureFunctor& picture, SharedPtr<const Word97::PICF> /*picf*/,
-                                SharedPtr<const Word97::CHP> /*chp*/ )
+void TextHandler::tableEndFound( )
 {
-    picture();
+
+}
+
+void TextHandler::msodrawObjectFound(const unsigned int /*globalCP*/, const PictureData* /*data*/)
+{
+}
+
+void TextHandler::bookmarkStart( const BookmarkData& /*data*/ )
+{
+}
+
+void TextHandler::bookmarkEnd( const BookmarkData& /*data*/ )
+{
 }

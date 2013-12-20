@@ -17,7 +17,7 @@
 
    You should have received a copy of the GNU Library General Public License
    along with this library; see the file COPYING.LIB.  If not, write to
-   the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
+   the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
    Boston, MA 02111-1307, USA.
 */
 
@@ -69,7 +69,7 @@ struct FFN {
     bool write(OLEStreamWriter *stream, bool preservePos=false) const;
 
     /**
-     * Set all the fields to the inital value (default is 0)
+     * Set all the fields to the initial value (default is 0)
      */
     void clear();
 

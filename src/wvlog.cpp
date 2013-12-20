@@ -22,3 +22,5 @@ namespace wvWare
 {
     const wvlogstream wvlog = wvlog;
 } // wvWare
+
+

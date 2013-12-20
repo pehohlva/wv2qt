@@ -12,7 +12,7 @@
 
    You should have received a copy of the GNU Library General Public License
    along with this library; see the file COPYING.LIB.  If not, write to
-   the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
+   the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
    Boston, MA 02111-1307, USA.
 */
 
@@ -84,22 +84,22 @@ using namespace wvWare;
 
 Fields::Fields( OLEStreamReader* tableStream, const Word97::FIB& fib ) :
     m_main( 0 ), m_header( 0 ), m_footnote( 0 ), m_annotation( 0 ),
-    m_endnote( 0 ), m_textbox( 0 ), m_headerTextbox( 0 )
+    m_endnote( 0 ), m_textbox( 0 ), m_headerTextbox( 0 ), m_bookmark( 0 )
 {
     tableStream->push();
 
 #ifdef WV2_DEBUG_FIELDS
-    wvlog << "Fields --------------" << std::endl
-          << "  main: fc=" << fib.fcPlcffldMom << " lcb=" << fib.lcbPlcffldMom << std::endl
-          << "  header: fc=" << fib.fcPlcffldHdr << " lcb=" << fib.lcbPlcffldHdr << std::endl
-          << "  footnote: fc=" << fib.fcPlcffldFtn << " lcb=" << fib.lcbPlcffldFtn << std::endl
-          << "  annotation: fc=" << fib.fcPlcffldAtn << " lcb=" << fib.lcbPlcffldAtn << std::endl
-          << "  endnote: fc=" << fib.fcPlcffldEdn << " lcb=" << fib.lcbPlcffldEdn << std::endl
-          << "  textbox: fc=" << fib.fcPlcffldTxbx << " lcb=" << fib.lcbPlcffldTxbx << std::endl
-          << "  headertextbox: fc=" << fib.fcPlcffldHdrTxbx << " lcb=" << fib.lcbPlcffldHdrTxbx << std::endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"Fields --------------" << endl
+          << "  main: fc=" << fib.fcPlcffldMom << " lcb=" << fib.lcbPlcffldMom << endl
+          << "  header: fc=" << fib.fcPlcffldHdr << " lcb=" << fib.lcbPlcffldHdr << endl
+          << "  footnote: fc=" << fib.fcPlcffldFtn << " lcb=" << fib.lcbPlcffldFtn << endl
+          << "  annotation: fc=" << fib.fcPlcffldAtn << " lcb=" << fib.lcbPlcffldAtn << endl
+          << "  endnote: fc=" << fib.fcPlcffldEdn << " lcb=" << fib.lcbPlcffldEdn << endl
+          << "  textbox: fc=" << fib.fcPlcffldTxbx << " lcb=" << fib.lcbPlcffldTxbx << endl
+          << "  bookmark: fc=" << fib.fcSttbfbkmk << " lcb=" << fib.lcbSttbfbkmk << endl
+          << "  headertextbox: fc=" << fib.fcPlcffldHdrTxbx << " lcb=" << fib.lcbPlcffldHdrTxbx << endl;
 #endif
-
-    tableStream->seek( fib.fcPlcffldMom, G_SEEK_SET ); // to make the sanity check work
+    tableStream->seek( fib.fcPlcffldMom, WV2_SEEK_SET ); // to make the sanity check work
     read( fib.fcPlcffldMom, fib.lcbPlcffldMom, tableStream, &m_main );
 
     sanityCheck( tableStream, fib.fcPlcffldHdr, fib.lcbPlcffldHdr );
@@ -117,6 +117,9 @@ Fields::Fields( OLEStreamReader* tableStream, const Word97::FIB& fib ) :
     sanityCheck( tableStream, fib.fcPlcffldTxbx, fib.lcbPlcffldTxbx );
     read( fib.fcPlcffldTxbx, fib.lcbPlcffldTxbx, tableStream, &m_textbox );
 
+    sanityCheck( tableStream, fib.fcSttbfbkmk, fib.lcbSttbfbkmk );
+    read( fib.fcSttbfbkmk, fib.lcbSttbfbkmk, tableStream, &m_bookmark );
+
     // No sanity check here, plcOcx might be in between
     read( fib.fcPlcffldHdrTxbx, fib.lcbPlcffldHdrTxbx, tableStream, &m_headerTextbox );
 
@@ -125,6 +128,7 @@ Fields::Fields( OLEStreamReader* tableStream, const Word97::FIB& fib ) :
 
 Fields::~Fields()
 {
+    delete m_bookmark;
     delete m_headerTextbox;
     delete m_textbox;
     delete m_endnote;
@@ -138,7 +142,7 @@ const FLD* Fields::fldForCP( Parser::SubDocument subDocument, U32 cp ) const
 {
     switch( subDocument ) {
         case Parser::None:
-            wvlog << "Error: The state of the parser is invalid!" << std::endl;
+            wvlog << __FILE__ << ":" << __LINE__ << " - " <<"Error: The state of the parser is invalid!" << endl;
             return 0;
             break;
         case Parser::Main:
@@ -151,7 +155,7 @@ const FLD* Fields::fldForCP( Parser::SubDocument subDocument, U32 cp ) const
             return fldForCP( m_header, cp );
             break;
         case Parser::Macro:
-            wvlog << "Warning: There shouldn't be any fields in macro text" << std::endl;
+            wvlog << __FILE__ << ":" << __LINE__ << " - " <<"Warning: There shouldn't be any fields in macro text" << endl;
             return 0;
             break;
         case Parser::Annotation:
@@ -166,32 +170,31 @@ const FLD* Fields::fldForCP( Parser::SubDocument subDocument, U32 cp ) const
         case Parser::HeaderTextBox:
             return fldForCP( m_headerTextbox, cp );
             break;
+        case Parser::Bookmark:
+            return fldForCP( m_bookmark, cp );
+            break;
     }
     return 0; // make the compiler happy, never reached
 }
 
-void Fields::read( U32 fc, U32 lcb, OLEStreamReader* tableStream, PLCF<FLD>** plcf )
+void Fields::read( U32 fc, U32 lcb, OLEStreamReader* tableStream, PLCFMap<FLD>** plcf )
 {
     if ( lcb == 0 )
         return;
-    tableStream->seek( fc, G_SEEK_SET );
-    *plcf = new PLCF<FLD>( lcb, tableStream );
+    tableStream->seek( fc, WV2_SEEK_SET );
+    *plcf = new PLCFMap<FLD>( lcb, tableStream );
 }
 
 void Fields::sanityCheck( const OLEStreamReader* tableStream, U32 nextFC, U32 lcb ) const
 {
     if ( lcb != 0 && static_cast<U32>( tableStream->tell() ) != nextFC )
-        wvlog << "Warning: Detected a hole within the table stream (next fc=" << nextFC << ")" << std::endl;
+        wvlog << __FILE__ << ":" << __LINE__ << " - " <<"Warning: Detected a hole within the table stream (next fc=" << nextFC << ")" << endl;
 }
 
-const FLD* Fields::fldForCP( const PLCF<FLD>* plcf, U32 cp ) const
+const FLD* Fields::fldForCP( const PLCFMap<FLD>* plcf, U32 cp ) const
 {
     if ( !plcf )
         return 0;
 
-    PLCFIterator<FLD> it( *plcf );
-    for ( ; it.current(); ++it )
-        if ( it.currentStart() == cp )
-            return it.current();
-    return 0;
+    return plcf->item( cp );
 }

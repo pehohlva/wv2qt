@@ -12,7 +12,7 @@
 
    You should have received a copy of the GNU Library General Public License
    along with this library; see the file COPYING.LIB.  If not, write to
-   the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
+   the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
    Boston, MA 02111-1307, USA.
 */
 
@@ -21,6 +21,7 @@
 
 #include "parser.h"
 #include "word97_generated.h"
+#include "wv2_export.h"
 
 #include <string>
 #include <list>
@@ -31,12 +32,12 @@ namespace wvWare
 
     // Word97 so far. Is that different in Word95?
     const unsigned char CELL_MARK = 7;
-    const unsigned char ROW_MARK = 7;
+    const unsigned char TTP_MARK = 7; //(ROW_MARK)
     const unsigned char TAB = 9;
     const unsigned char HARD_LINE_BREAK = 11;
     const unsigned char PAGE_BREAK = 12;
     const unsigned char SECTION_MARK = 12;
-    const unsigned char PARAGRAPH_MARK = 13;
+    const unsigned char PARAGRAPH_MARK = 13; //(0x000D)
     const unsigned char COLUMN_BREAK = 14;
     const unsigned char FIELD_BEGIN_MARK = 19;
     const unsigned char FIELD_SEPARATOR = 20;
@@ -49,41 +50,6 @@ namespace wvWare
     const unsigned char FIELD_ESCAPE_CHAR = '\\';
     const unsigned char FORMULA_MARK = '\\';
 
-    // Special chars (fSpec==1)
-    const unsigned char SPEC_CURRENT_PAGE_NUMBER = 0;
-    const unsigned char SPEC_PICTURE = 1;
-    const unsigned char SPEC_AUTONUM_FOOTNOTE_REF = 2;
-    const unsigned char SPEC_FOOTNOTE_SEPARATOR = 3;
-    const unsigned char SPEC_FOOTNOTE_CONTINUATION = 4;
-    const unsigned char SPEC_ANNOTATION_REF = 5;
-    const unsigned char SPEC_LINE_NUMBER = 6;
-    const unsigned char SPEC_HAND_ANNOTATION_PIC = 7;
-    const unsigned char SPEC_DRAWN_OBJECT = 8;
-    const unsigned char SPEC_ABBREV_DATE = 10;
-    const unsigned char SPEC_TIME_HMS = 11;
-    const unsigned char SPEC_CURRENT_SECTION_NUMBER = 12;
-    const unsigned char SPEC_ABBREV_WEEKDAY = 14;
-    const unsigned char SPEC_WEEKDAY = 15;
-    const unsigned char SPEC_DAY_SHORT = 16;
-    const unsigned char SPEC_CURRENT_HOUR = 22;
-    const unsigned char SPEC_CURRENT_HOUR_TWODIG = 23;
-    const unsigned char SPEC_CURRENT_MINUTE = 24;
-    const unsigned char SPEC_CURRENT_MINUTE_TWODIG = 25;
-    const unsigned char SPEC_CURRENT_SECONDS = 26;
-    const unsigned char SPEC_CURRENT_AMPM = 27;
-    const unsigned char SPEC_CURRENT_TIME_HMS = 28;
-    const unsigned char SPEC_DATE_M = 29;
-    const unsigned char SPEC_DATE_SHORT = 30;
-    const unsigned char SPEC_MONTH_SHORT = 33;
-    const unsigned char SPEC_YEAR_LONG = 34;
-    const unsigned char SPEC_YEAR_SHORT = 35;
-    const unsigned char SPEC_MONTH_ABBREV = 36;
-    const unsigned char SPEC_MONTH_LONG = 37;
-    const unsigned char SPEC_CURRENT_TIME_HM = 38;
-    const unsigned char SPEC_DATE_LONG = 39;
-    const unsigned char SPEC_MERGE_HELPER = 41;
-
-
     class Properties97;
     class ListInfoProvider;
     class FontCollection;
@@ -91,15 +57,18 @@ namespace wvWare
     class Fields;
     class Headers;
     class Footnotes97;
+    class Annotations;
     class Drawings;
+    class Bookmarks;
     template<class T> class PLCF;
 
     // Helper structures for the Functor-based approach
     struct HeaderData;
     struct FootnoteData;
+    struct AnnotationData;
     struct TableRowData;
     struct PictureData;
-
+    struct BookmarkData;
     /**
      * This class should contain all the common functionality shared
      * among the Word9[5|7] parsers.
@@ -107,11 +76,19 @@ namespace wvWare
     class Parser9x : public Parser
     {
     public:
+        /**
+         * Generally, the Word file format contains pointers to all the primary
+         * structures in the FIB. It can be useful to read some of these initially
+         * (and the results "cached" if needed) so that the main parse can proceed
+         * with these already in place.
+         *
+         * @see parse, init
+         */
         Parser9x( OLEStorage* storage, OLEStreamReader* wordDocument, const Word97::FIB& fib );
         virtual ~Parser9x();
 
         /**
-         * The main parsing method
+         * The main parsing method.
          */
         virtual bool parse();
 
@@ -127,9 +104,14 @@ namespace wvWare
          * Get the associated strings (author, title,...).
          * Not cached.
          */
+        //// virtual AssociatedStrings associatedStrings() const = 0;
         virtual AssociatedStrings associatedStrings();
 
         virtual const StyleSheet& styleSheet() const;
+
+        virtual const Drawings* getDrawings() const;
+
+        virtual OLEStreamReader* getTable();
 
         // This part of the public API is only visible to the Functor classes,
         // as the "outside world" only sees the public API of Parser. The Functors
@@ -142,8 +124,12 @@ namespace wvWare
         //    - Be very careful, these calls can possibly be triggered at any time
         void parseHeaders( const HeaderData& data );
         void parseFootnote( const FootnoteData& data );
+        void parseAnnotation( const AnnotationData& data );
         void parseTableRow( const TableRowData& data );
         void parsePicture( const PictureData& data );
+
+        //Can't create Functor for textbox in advance.  Index into plcfTxbxTxt unknown.
+        virtual void parseTextBox(uint index, bool stylesxml);
 
     protected:
         // First all variables which don't change their state during
@@ -162,11 +148,14 @@ namespace wvWare
         // to make the parsing code reentrant.
 
     private:
+        UString m_customFootnote;
         // Don't copy or assign us
         Parser9x( const Parser9x& rhs );
         Parser9x& operator=( const Parser9x& rhs );
 
-        // Uniquely represents a position inside a complex file. Used to map a CP to a Position
+        // Uniquely represents the position inside of a text stream of a
+        // document by mapping a CP to an offset into the corresponding
+        // piece retrieved from the piece table.
         struct Position
         {
             // Start position
@@ -199,13 +188,19 @@ namespace wvWare
 
         // We have to keep track of the current parsing mode (e.g. are we skimming tables
         // or are we parsing them?)
-        enum ParsingMode { Default, Table };
+        enum ParsingMode { Default, Table, NestedTable };
 
         // "Callbacks" for the 95/97 parsers
         // ##### TODO
 
         // Private helper methods
         std::string tableStream() const;
+
+        /**
+         * Convenience method to separate heavyweight initialisation away from the
+         * constructor itself. Typically used to read in any FIB structures needed
+         * during the parse().
+         */
         void init();
         bool readPieceTable();
         void fakePieceTable();
@@ -219,28 +214,62 @@ namespace wvWare
         // plain old overloading. It's just a matter of compressed vs. real unicode (1 vs. 2 bytes)
         UString processPieceStringHelper( XCHAR* string, unsigned int start, unsigned int index ) const;
         UString processPieceStringHelper( U8* string, unsigned int start, unsigned int index ) const;
-        // Processes the current contents of the Paragraph structure and clears it when it's done
+
+        /**
+         * The basic structure of a Word text document is a sequence of paragraphs comprising
+         * runs of text with a given set of properties (i.e. a CHP). This model is implemented
+         * by having parse() call processParagraph().
+         *
+         * The processXXX() methods deal with text in blocks:
+         *<ul>
+         *  <li>
+         *  processParagraph() processes the current contents of the Paragraph structure
+         *  and clears it when it's done. Generally calls processChunk().
+         *  </li>
+         *  <li>
+         *  processChunk() processes the section text with a given CHP value. This is what
+         *  processRun(), except that processChunk() also handles points (such as for footnotes
+         *  and endnotes) which are marked by arrays of CPs (located via the FIB). Generally calls
+         *  processRun().
+         *  </li>
+         *  <li>
+         *  processRun() processes the section text with a given CHP value. If CHP.fSpec is set,
+         *  calls emitSpecialCharacter().
+         *  </li>
+         *</ul>
+         */
         void processParagraph( U32 fc );
         void processChunk( const Chunk& chunk, SharedPtr<const Word97::CHP> chp,
                            U32 length, U32 index, U32 currentStart );
         void processRun( const Chunk& chunk, SharedPtr<const Word97::CHP> chp,
                          U32 length, U32 index, U32 currentStart );
 
-        void processSpecialCharacter( UChar character, U32 globalCP, SharedPtr<const Word97::CHP> chp );
-        void processFootnote( UChar character, U32 globalCP, SharedPtr<const Word97::CHP> chp );
+        /**
+         * Generally, the emitXXX() methods gather and emit the information needed for the
+         * corresponding functors.
+         */
+        void emitSpecialCharacter( UChar character, U32 globalCP, SharedPtr<const Word97::CHP> chp );
+        void emitFootnote( UString characters, U32 globalCP, SharedPtr<const Word97::CHP> chp, U32 length=1 );
+        void emitAnnotation( UString characters, U32 globalCP, SharedPtr<const Word97::CHP> chp, U32 length=1 );
 
-        // Helper methods to gather and emit the information needed for the functors
+        /**
+         * This function is only used to check if there are any bookmarks at
+         * the CP of the paragraph mark.  TODO: There's no support for
+         * bookmarks which mark a text range between more paragraphs.
+         */
+        void emitBookmark( U32 globalCP );
+
         void emitHeaderData( SharedPtr<const Word97::SEP> sep );
-        void emitPictureData( SharedPtr<const Word97::CHP> chp );
-        void emitDrawnObject( SharedPtr<const Word97::CHP> chp );
+
+        /**
+         * Parse the picture data.
+         * @return name of the picture as stored in the Pictures directory of
+         * the ODF container.
+         */
+        QString emitPictureData( const U32 globalCP, SharedPtr<const Word97::CHP> chp,
+                                 const bool isBulletPicture = false );
 
         void parseHeader( const HeaderData& data, unsigned char mask );
-
-        void parsePictureEscher( const PictureData& data, OLEStreamReader* stream,
-                int totalPicfSize, int picfStartPos );
-        void parsePictureExternalHelper( const PictureData& data, OLEStreamReader* stream );
-        void parsePictureBitmapHelper( const PictureData& data, OLEStreamReader* stream );
-        void parsePictureWmfHelper( const PictureData& data, OLEStreamReader* stream );
 
         void saveState( U32 newRemainingChars, SubDocument newSubDocument, ParsingMode newParsingMode = Default );
         void restoreState();
@@ -253,29 +282,37 @@ namespace wvWare
         // Helper method to use std::accumulate in the table handling code
         static int accumulativeLength( int len, const Chunk& chunk );
 
-        // Private variables, no access needed in 95/97 code
-        // First all variables which don't change their state during
-        // the parsing process. We don't have to save and restore those.
+        // Private variables, no access needed in 95/97 code.  First all
+        // variables which don't change their state during the parsing
+        // process.  We don't have to save and restore those.
         ListInfoProvider* m_lists;
         TextConverter* m_textconverter;
         Fields* m_fields;
         Footnotes97* m_footnotes;
+        Annotations* m_annotations;
         FontCollection* m_fonts;
         Drawings* m_drawings;
+        Bookmarks* m_bookmarks;
 
-        PLCF<Word97::PCD>* m_plcfpcd;     // piece table
+        PLCF<Word97::PCD>* m_plcfpcd;   // piece table
 
-        // From here on we have all variables which change their state depending
-        // on the parsed content. These variables have to be saved and restored
-        // to make the parsing code reentrant.
+        // From here on we have all variables which change their state
+        // depending on the parsed content.  These variables have to be saved
+        // and restored to make the parsing code reentrant.
         Position* m_tableRowStart;      // If != 0 this represents the start of a table row
-        U32 m_tableRowLength;           // Lenght of the table row (in characters). Only valid
+        U32 m_tableRowLength;           // Length of the table row (in characters). Only valid
         bool m_cellMarkFound;           // if m_tableRowStart != 0
         int m_remainingCells;           // The number of remaining cells for the processed row
+
+        // Table skimming is a phase in which we try to locate the last
+        // paragraph of a table.  Using parseHelper to parse the table content.
+        bool m_table_skimming;
 
         Paragraph* m_currentParagraph;
 
         U32 m_remainingChars;
+
+        // The num. of the section being processed.
         U32 m_sectionNumber;
 
         // Keeps track of the current sub document
@@ -288,17 +325,18 @@ namespace wvWare
         // Needed to have reentrant parsing methods (to make the functor approach work)
         struct ParsingState
         {
-            ParsingState( Position* tableRowS, U32 tableRowL, bool cMarkFound, 
-                          int remCells, Paragraph* parag, U32 remChars, U32 sectionNum,
+            ParsingState( Position* tableRowS, U32 tableRowL, bool cMarkFound,
+                          int remCells, bool ts, Paragraph* parag, U32 remChars, U32 sectionNum,
                           SubDocument subD, ParsingMode mode ) :
                 tableRowStart( tableRowS ), tableRowLength( tableRowL ), cellMarkFound( cMarkFound),
-                remainingCells( remCells ), paragraph( parag ), remainingChars( remChars ),
+                remainingCells( remCells ), tableSkimming( ts ), paragraph( parag ), remainingChars( remChars ),
                 sectionNumber( sectionNum ), subDocument( subD ), parsingMode( mode ) {}
 
             Position* tableRowStart;
             U32 tableRowLength;
             bool cellMarkFound;
             int remainingCells;
+            bool tableSkimming;
             Paragraph* paragraph;
             U32 remainingChars;
             U32 sectionNumber;   // not strictly necessary, but doesn't hurt

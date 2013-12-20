@@ -12,7 +12,7 @@
 
    You should have received a copy of the GNU Library General Public License
    along with this library; see the file COPYING.LIB.  If not, write to
-   the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
+   the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
    Boston, MA 02111-1307, USA.
 */
 
@@ -20,6 +20,7 @@
 #define HEADERS97_H
 
 #include "headers.h"
+#include "wv2_export.h"
 
 namespace wvWare
 {
@@ -32,7 +33,8 @@ namespace wvWare
     class Headers97 : public Headers
     {
     public:
-        Headers97( U32 fcPlcfhdd, U32 lcbPlcfhdd, OLEStreamReader* tableStream );
+        Headers97( U32 ccpHdd, U32 fcPlcfhdd, U32 lcbPlcfhdd, U32 fcPlcfsed, U32 lcbPlcfsed,
+                   OLEStreamReader* tableStream );
 
         /**
          * Returns the header if there is any for the given mask. If we didn't find

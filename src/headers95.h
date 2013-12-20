@@ -12,7 +12,7 @@
 
    You should have received a copy of the GNU Library General Public License
    along with this library; see the file COPYING.LIB.  If not, write to
-   the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
+   the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
    Boston, MA 02111-1307, USA.
 */
 
@@ -20,6 +20,7 @@
 #define HEADERS95_H
 
 #include "headers.h"
+#include "wv2_export.h"
 
 namespace wvWare
 {
@@ -32,7 +33,8 @@ namespace wvWare
     class Headers95 : public Headers
     {
     public:
-        Headers95( U32 fcPlcfhdd, U32 lcbPlcfhdd, OLEStreamReader* tableStream, U8 dop_grpfIhdt );
+        Headers95( U32 ccpHdd, U32 fcPlcfhdd, U32 lcbPlcfhdd, U32 fcPlcfsed, U32 lcbPlcfsed,
+                   OLEStreamReader* tableStream, U8 dop_grpfIhdt );
 
         /**
          * Returns the header if there is any for the given mask. If we didn't find
@@ -40,15 +42,15 @@ namespace wvWare
          */
         virtual std::pair<U32, U32> findHeader( int sectionNumber, unsigned char mask ) const;
 
-        virtual void headerMask( U8 sep_grpfIhdt );
+        virtual void set_headerMask( U8 sep_grpfIhdt );
 
     private:
         // Counts the '1' bits in <mask> from the lsb up to <limit> (exclusively)
         int countOnes( U8 mask, U8 limit ) const;
 
         const int ihddOffset;
-        std::vector<U32> m_headerCount;
-        std::vector<U8> m_grpfIhdt;
+        QList<U32> m_headerCount;
+        QList<U8> m_grpfIhdt;
     };
 
 } // namespace wvWare

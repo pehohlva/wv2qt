@@ -12,7 +12,7 @@
 
    You should have received a copy of the GNU Library General Public License
    along with this library; see the file COPYING.LIB.  If not, write to
-   the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
+   the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
    Boston, MA 02111-1307, USA.
 */
 
@@ -57,9 +57,15 @@ const ListInfo* ParagraphProperties::listInfo() const
     return m_listInfo;
 }
 
-void ParagraphProperties::createListInfo( ListInfoProvider& listInfoProvider )
+void ParagraphProperties::setBulletPictureName(const QString& name)
 {
-    if ( m_listInfo || !listInfoProvider.isValid( m_pap.ilfo, m_pap.nLvlAnm ) )
+    m_listInfo->setBulletPictureName(name);
+}
+
+void ParagraphProperties::createListInfo( ListInfoProvider& listInfoProvider, Word97::CHP& chp)
+{
+    if ( m_listInfo || !listInfoProvider.isValid( m_pap.ilfo, m_pap.nLvlAnm ) ) {
         return;
-    m_listInfo = new ListInfo( m_pap, listInfoProvider );
+    }
+    m_listInfo = new ListInfo( m_pap, chp, listInfoProvider );
 }

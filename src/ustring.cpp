@@ -1,27 +1,23 @@
 // -*- c-basic-offset: 2 -*-
 /*
- *  This file is part of the KDE libraries
- *  Copyright (C) 1999-2000 Harri Porten (porten@kde.org)
- *
- *  This library is free software; you can redistribute it and/or
- *  modify it under the terms of the GNU Library General Public
- *  License as published by the Free Software Foundation; either
- *  version 2 of the License, or (at your option) any later version.
- *
- *  This library is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *  Library General Public License for more details.
- *
- *  You should have received a copy of the GNU Library General Public License
- *  along with this library; see the file COPYING.LIB.  If not, write to
- *  the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- *  Boston, MA 02111-1307, USA.
+   This library is free software; you can redistribute it and/or
+   modify it under the terms of the Library GNU General Public
+   version 2 of the License, or (at your option) version 3 or,
+   at the discretion of KDE e.V (which shall act as a proxy as in
+   section 14 of the GPLv3), any later version..
+
+   This library is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+   Library General Public License for more details.
+
+   You should have received a copy of the GNU Library General Public License
+   along with this library; see the file COPYING.LIB.  If not, write to
+   the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+   Boston, MA 02110-1301, USA.
  */
 
 #include "ustring.h"
-#include <cstring>
-#include <math.h>
 
 #ifdef HAVE_CONFIG_H
 #include <config.h>
@@ -72,6 +68,7 @@ bool wvWare::isNaN(double d)
 #elif defined HAVE_FLOAT_H
   return _isnan(d) != 0;
 #else
+  // IEEE: NaN != NaN
   return !(d == d);
 #endif
 }
@@ -321,7 +318,7 @@ UString UString::from(double d)
   else if (isNegInf(d))
     strcpy(buf,"-Infinity");
   else
-    sprintf(buf, "%.16g", d);	// does the right thing
+    sprintf(buf, "%.16g", d);    // does the right thing
 
   // ECMA 3rd ed. 9.8.1 9 e: "with no leading zeros"
   int buflen = strlen(buf);
@@ -437,11 +434,11 @@ double UString::toDouble( bool tolerant ) const
     d = 0.0;
     while (*(++c)) {
       if (*c >= '0' && *c <= '9')
-	d = d * 16.0 + *c - '0';
+    d = d * 16.0 + *c - '0';
       else if ((*c >= 'A' && *c <= 'F') || (*c >= 'a' && *c <= 'f'))
-	d = d * 16.0 + (*c & 0xdf) - 'A' + 10.0;
+    d = d * 16.0 + (*c & 0xdf) - 'A' + 10.0;
       else
-	break;
+    break;
     }
   } else {
     // regular number ?
@@ -453,13 +450,13 @@ double UString::toDouble( bool tolerant ) const
       // infinity ?
       d = 1.0;
       if (*c == '+')
-	c++;
+    c++;
       else if (*c == '-') {
-	d = -1.0;
-	c++;
+    d = -1.0;
+    c++;
       }
       if (strncmp(c, "Infinity", 8) != 0)
-	return NaN;
+    return NaN;
       d = d * Inf;
       c += 8;
     }
@@ -573,7 +570,7 @@ bool wvWare::operator==(const UString& s1, const UString& s2)
     return false;
 
   return (memcmp(s1.rep->dat, s2.rep->dat,
-		 s1.rep->len * sizeof(UChar)) == 0);
+         s1.rep->len * sizeof(UChar)) == 0);
 }
 
 bool wvWare::operator==(const UString& s1, const char *s2)

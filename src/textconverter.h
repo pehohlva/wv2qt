@@ -12,7 +12,7 @@
 
    You should have received a copy of the GNU Library General Public License
    along with this library; see the file COPYING.LIB.  If not, write to
-   the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
+   the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
    Boston, MA 02111-1307, USA.
 */
 
@@ -21,6 +21,7 @@
 
 #include "global.h"
 #include <string>
+#include "wv2_export.h"
 
 namespace wvWare
 {
@@ -40,13 +41,13 @@ public:
     /**
      * Constructs a TextConverter which converts to UCS-2
      */
-    TextConverter( const std::string& fromCode );
+    explicit TextConverter( const std::string& fromCode );
     /**
      * Constructs a TextConverter which converts from the proper
      * codepage for the given lid to UCS-2. This is probably what
      * you want to use.
      */
-    TextConverter( U16 lid );
+    explicit TextConverter( U16 lid );
 
     /**
      * Properly cleans up

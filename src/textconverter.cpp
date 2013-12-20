@@ -2,8 +2,10 @@
    Copyright (C) 2001-2003 Werner Trobin <trobin@kde.org>
 
    This library is free software; you can redistribute it and/or
-   modify it under the terms of the GNU Library General Public
-   License version 2 as published by the Free Software Foundation.
+   modify it under the terms of the Library GNU General Public
+   version 2 of the License, or (at your option) version 3 or,
+   at the discretion of KDE e.V (which shall act as a proxy as in
+   section 14 of the GPLv3), any later version..
 
    This library is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -12,24 +14,12 @@
 
    You should have received a copy of the GNU Library General Public License
    along with this library; see the file COPYING.LIB.  If not, write to
-   the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-   Boston, MA 02111-1307, USA.
+   the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+   Boston, MA 02110-1301, USA.
 */
 
 #include "textconverter.h"
 #include "ustring.h"
-
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif
-
-//#ifdef HAVE_ICONV_H
-#include <iconv.h>
-//#endif
-#ifdef HAVE_SYS_ICONV_H
-#include <sys/iconv.h>
-#endif
-
 #include "wvlog.h"
 #include <errno.h>
 
@@ -43,17 +33,17 @@ public:
 
     Private( const std::string& fromCode ) :
 #ifdef WORDS_BIGENDIAN
-        m_toCode( "UNICODEBIG" ),
+        m_toCode( "UCS-2BE" ),
 #else
-        m_toCode( "UNICODELITTLE" ),
+        m_toCode( "UCS-2LE" ),
 #endif
         m_fromCode( fromCode ), m_iconv( reinterpret_cast<iconv_t>( -1 ) ) {}
 
     Private( U16 lid ) :
 #ifdef WORDS_BIGENDIAN
-        m_toCode( "UNICODEBIG" ),
+        m_toCode( "UCS-2BE" ),
 #else
-        m_toCode( "UNICODELITTLE" ),
+        m_toCode( "UCS-2LE" ),
 #endif
         m_fromCode( TextConverter::LID2Codepage( lid ) ),
         m_iconv( reinterpret_cast<iconv_t>( -1 ) ) {}
@@ -123,10 +113,8 @@ UString TextConverter::convert( const std::string& input ) const
 UString TextConverter::convert( const char* input, unsigned int length ) const
 {
     if ( !isOk() ) {
-        wvlog << "Error: I don't have any open converter." << std::endl;
-        // TODO, use iconv later.
-        std::string t(input, length);
-        return UString(t.c_str());
+        wvlog << __FILE__ << ":" << __LINE__ << " - " <<"Error: I don't have any open converter." << endl;
+        return UString();
     }
 
     // WinWord doesn't have multi-byte characters encoded in compressed-unicode
@@ -138,13 +126,7 @@ UString TextConverter::convert( const char* input, unsigned int length ) const
     const char* p_input = input;
     size_t inputLen = length;
 
-#ifdef WIN32
-    if ( static_cast<size_t>( -1 ) == iconv( d->m_iconv, const_cast<const char**>( &p_input ), &inputLen, &p_output, &outputLen ) )
-    {
-#else
-    if ( static_cast<size_t>( -1 ) == iconv( d->m_iconv, const_cast<char**>( &p_input ), &inputLen, &p_output, &outputLen ) )
-    {
-#endif
+    if ( static_cast<size_t>( -1 ) == iconv( d->m_iconv, const_cast<ICONV_CONST char**>( &p_input ), &inputLen, &p_output, &outputLen ) ) {
         delete [] output;
         // If we got more than one character, try to return as much text as possible...
         // To convert the text with as few iconv calls as possible we are using a divide
@@ -155,13 +137,13 @@ UString TextConverter::convert( const char* input, unsigned int length ) const
             return ustring;
         }
         else {
-            wvlog << "Error: The conversion was not successful: " << errno << std::endl;
+            wvlog << __FILE__ << ":" << __LINE__ << " - " <<"Error: The conversion was not successful: " << errno << endl;
             return UString();
         }
     }
 
     if ( outputLen != 0 || ( outputLen & 0x00000001 ) == 1 )
-        wvlog << "Strange, got an outputLen of " << outputLen << std::endl;
+        wvlog << __FILE__ << ":" << __LINE__ << " - " <<"Strange, got an outputLen of " << outputLen << endl;
 
     UString ustring( output, length - ( outputLen >> 1 ), true );
     delete [] output;
@@ -318,18 +300,18 @@ void TextConverter::close()
 void TextConverter::open()
 {
     if ( d->m_iconv != reinterpret_cast<iconv_t>( -1 ) ) {
-        wvlog << "Warning: Do you really want to get rid of the current converter?" << std::endl;
+        wvlog << __FILE__ << ":" << __LINE__ << " - " <<"Warning: Do you really want to get rid of the current converter?" << endl;
         close();
     }
 #ifdef WORDS_BIGENDIAN
-    if ( d->m_toCode != "UNICODEBIG" )
-        wvlog << "Warning: Do you really want to do convert to something else than UNICODEBIG?" << std::endl;
+    if ( d->m_toCode != "UCS-2BE" )
+        wvlog << __FILE__ << ":" << __LINE__ << " - " <<"Warning: Do you really want to do convert to something else than UCS-2BE?" << endl;
 #else
-    if ( d->m_toCode != "UNICODELITTLE" )
-        wvlog << "Warning: Do you really want to do convert to something else than UNICODELITTLE?" << std::endl;
+    if ( d->m_toCode != "UCS-2LE" )
+        wvlog << __FILE__ << ":" << __LINE__ << " - " <<"Warning: Do you really want to do convert to something else than UCS-2LE?" << endl;
 #endif
     if ( d->m_fromCode == "not known" )
-        wvlog << "Warning: We don't know the current charset you want to convert from!" << std::endl;
+        wvlog << __FILE__ << ":" << __LINE__ << " - " <<"Warning: We don't know the current charset you want to convert from!" << endl;
 
     if ( !d->m_toCode.empty() && !d->m_fromCode.empty() )
         d->m_iconv = iconv_open( d->m_toCode.c_str(), d->m_fromCode.c_str() );

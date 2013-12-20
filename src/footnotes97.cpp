@@ -1,5 +1,6 @@
 /* This file is part of the wvWare 2 project
    Copyright (C) 2002-2003 Werner Trobin <trobin@kde.org>
+   Copyright (C) 2011 Matus Uzak <matus.uzak@ixonos.com>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -12,7 +13,7 @@
 
    You should have received a copy of the GNU Library General Public License
    along with this library; see the file COPYING.LIB.  If not, write to
-   the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
+   the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
    Boston, MA 02111-1307, USA.
 */
 
@@ -29,13 +30,21 @@ Footnotes97::Footnotes97( OLEStreamReader* tableStream, const Word97::FIB& fib )
     m_footnoteRef( 0 ), m_footnoteRefIt( 0 ), m_endnoteRef( 0 ), m_endnoteRefIt( 0 )
 {
 #ifdef WV2_DEBUG_FOOTNOTES
-    wvlog << "Footnotes97::Footnotes97()" << std::endl
-          << "   fcPlcffndRef=" << fib.fcPlcffndRef << " lcbPlcffndRef=" << fib.lcbPlcffndRef << std::endl
-          << "   fcPlcffndTxt=" << fib.fcPlcffndTxt << " lcbPlcffndTxt=" << fib.lcbPlcffndTxt << std::endl
-          << "   fcPlcfendRef=" << fib.fcPlcfendRef << " lcbPlcfendRef=" << fib.lcbPlcfendRef << std::endl
-          << "   fcPlcfendTxt=" << fib.fcPlcfendTxt << " lcbPlcfendTxt=" << fib.lcbPlcfendTxt << std::endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"Footnotes97::Footnotes97()" << endl
+          << "   fcPlcffndRef=" << fib.fcPlcffndRef << " lcbPlcffndRef=" << fib.lcbPlcffndRef << endl
+          << "   fcPlcffndTxt=" << fib.fcPlcffndTxt << " lcbPlcffndTxt=" << fib.lcbPlcffndTxt << endl
+          << "   fcPlcfendRef=" << fib.fcPlcfendRef << " lcbPlcfendRef=" << fib.lcbPlcfendRef << endl
+          << "   fcPlcfendTxt=" << fib.fcPlcfendTxt << " lcbPlcfendTxt=" << fib.lcbPlcfendTxt << endl;
 #endif
     tableStream->push();
+
+#ifdef WV2_DEBUG_FOOTNOTES
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"ccpFtn:" << fib.ccpFtn;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"ccpEdn:" << fib.ccpEdn;
+#endif
+
+    //TODO: validation required!
+
     // Footnotes
     init( fib.fcPlcffndRef, fib.lcbPlcffndRef, fib.fcPlcffndTxt, fib.lcbPlcffndTxt,
           tableStream, &m_footnoteRef, &m_footnoteRefIt, m_footnoteTxt, m_footnoteTxtIt );
@@ -56,7 +65,7 @@ Footnotes97::~Footnotes97()
 FootnoteData Footnotes97::footnote( U32 globalCP, bool& ok )
 {
 #ifdef WV2_DEBUG_FOOTNOTES
-    wvlog << "Footnotes97::footnote(): globalCP=" << globalCP << std::endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"Footnotes97::footnote(): globalCP=" << globalCP << endl;
 #endif
     ok = true; // let's assume we will find it
     if ( m_footnoteRefIt && m_footnoteRefIt->currentStart() == globalCP &&
@@ -79,7 +88,7 @@ FootnoteData Footnotes97::footnote( U32 globalCP, bool& ok )
         return FootnoteData( FootnoteData::Endnote, fAuto, start, *m_endnoteTxtIt );
     }
 
-    wvlog << "Bug: There is no footnote or endnote with the CP " << globalCP << std::endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"Bug: There is no footnote or endnote with the CP " << globalCP << endl;
     ok = false;
     return FootnoteData( FootnoteData::Footnote, false, 0, 0 );
 }
@@ -101,31 +110,50 @@ void Footnotes97::init( U32 fcRef, U32 lcbRef, U32 fcTxt, U32 lcbTxt, OLEStreamR
     if ( lcbRef == 0 )
         return;
 
-    tableStream->seek( fcRef, G_SEEK_SET );
+    tableStream->seek( fcRef, WV2_SEEK_SET );
     *ref = new PLCF<Word97::FRD>( lcbRef, tableStream );
     *refIt = new PLCFIterator<Word97::FRD>( **ref );
 
 #ifdef WV2_DEBUG_FOOTNOTES
-    wvlog << "Footnotes97::init()" << std::endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"Footnotes97::init()" << endl;
     ( *ref )->dumpCPs();
 #endif
 
     if ( lcbTxt == 0 )
-        wvlog << "Bug: lcbTxt == 0 but lcbRef != 0" << std::endl;
+        wvlog << __FILE__ << ":" << __LINE__ << " - " <<"Bug: lcbTxt == 0 but lcbRef != 0" << endl;
     else {
         if ( static_cast<U32>( tableStream->tell() ) != fcTxt ) {
-            wvlog << "Warning: Found a hole in the table stream" << std::endl;
-            tableStream->seek( fcTxt, G_SEEK_SET );
+            wvlog << __FILE__ << ":" << __LINE__ << " - " <<"Warning: Found a hole in the table stream" << endl;
+            tableStream->seek( fcTxt, WV2_SEEK_SET );
         }
         for ( U32 i = 0; i < lcbTxt; i += sizeof( U32 ) ) {
             txt.push_back( tableStream->readU32() );
 #ifdef WV2_DEBUG_FOOTNOTES
-            wvlog << "read: " << txt.back() << std::endl;
+            wvlog << __FILE__ << ":" << __LINE__ << " - " <<"read: " << txt.back() << endl;
 #endif
         }
         txtIt = txt.begin();
     }
 #ifdef WV2_DEBUG_FOOTNOTES
-    wvlog << "Footnotes97::init() done" << std::endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"Footnotes97::init() done" << endl;
 #endif
+}
+
+void Footnotes97::check( U32 globalCP )
+{
+    while (nextFootnote() < globalCP) {
+        ++( *m_footnoteRefIt );
+        ++m_footnoteTxtIt;
+#ifdef WV2_DEBUG_FOOTNOTES
+        wvlog << __FILE__ << ":" << __LINE__ << " - " <<"Footnote skipped!";
+#endif
+    }
+
+    while (nextEndnote() < globalCP) {
+        ++( *m_endnoteRefIt );
+        ++m_endnoteTxtIt;
+#ifdef WV2_DEBUG_FOOTNOTES
+        wvlog << __FILE__ << ":" << __LINE__ << " - " <<"Endnote skipped!";
+#endif
+    }
 }

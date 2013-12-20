@@ -2,8 +2,10 @@
    Copyright (C) 2001 Werner Trobin <trobin@kde.org>
 
    This library is free software; you can redistribute it and/or
-   modify it under the terms of the GNU Library General Public
-   License version 2 as published by the Free Software Foundation.
+   modify it under the terms of the Library GNU General Public
+   version 2 of the License, or (at your option) version 3 or,
+   at the discretion of KDE e.V (which shall act as a proxy as in
+   section 14 of the GPLv3), any later version..
 
    This library is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -12,8 +14,8 @@
 
    You should have received a copy of the GNU Library General Public License
    along with this library; see the file COPYING.LIB.  If not, write to
-   the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-   Boston, MA 02111-1307, USA.
+   the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+   Boston, MA 02110-1301, USA.
 */
 
 // This code is generated from the Microsoft HTML specification of the
@@ -26,10 +28,12 @@
 // If you find bugs or strange behavior please contact Werner Trobin
 // <trobin@kde.org>
 
+#include "msdoc.h"
 #include <word97_generated.h>
 #include <olestream.h>
 #include <string.h>  // memset(), memcpy()
 #include "wvlog.h"
+#include "global.h"
 
 namespace wvWare {
 
@@ -231,9 +235,9 @@ void DTTM::clear() {
 
 void DTTM::dump() const
 {
-    wvlog << "Dumping DTTM:" << std::endl;
-    wvlog << toString().c_str() << std::endl;
-    wvlog << "\nDumping DTTM done." << std::endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"Dumping DTTM:" << endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<toString().c_str() << endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"\nDumping DTTM done." << endl;
 }
 
 std::string DTTM::toString() const
@@ -548,14 +552,14 @@ bool SHD::read(OLEStreamReader *stream, bool preservePos) {
 
     shifterU16=stream->readU16();
     ico=shifterU16;
-    cvFore=Word97::icoToRGB(ico);
+    cvFore=Word97::icoToCOLORREF(ico);
     shifterU16>>=5;
     ico=shifterU16;
-    cvBack=Word97::icoToRGB(ico);
+    cvBack=Word97::icoToCOLORREF(ico);
     shifterU16>>=5;
     ipat=shifterU16;
 
-    if(preservePos)
+    if (preservePos)
         stream->pop();
     return true;
 }
@@ -563,17 +567,23 @@ bool SHD::read(OLEStreamReader *stream, bool preservePos) {
 void SHD::readPtr(const U8 *ptr) {
 
     U16 shifterU16;
-    U16 ico;
+    U16 icoFore, icoBack;
 
     shifterU16=readU16(ptr);
     ptr+=sizeof(U16);
-    ico=shifterU16 & 0x1F;
-    cvFore=Word97::icoToRGB(ico);
+    icoFore=shifterU16 & 0x1F;
+    cvFore=Word97::icoToCOLORREF(icoFore);
     shifterU16>>=5;
-    ico=shifterU16 & 0x1F;
-    cvBack=Word97::icoToRGB(ico);
+    icoBack=shifterU16 & 0x1F;
+    cvBack=Word97::icoToCOLORREF(icoBack);
     shifterU16>>=5;
     ipat=shifterU16;
+
+#ifdef WV2_DEBUG_SHD
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"icoFore: 0x" << hex << icoFore << endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"icoBack: 0x" << hex << icoBack << endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"ipat: 0x" << hex << ipat << endl;
+#endif
 }
 
 void SHD::read90Ptr(const U8 *ptr) {
@@ -603,6 +613,63 @@ void SHD::read90Ptr(const U8 *ptr) {
     ipat=shifterU16;
 }
 
+void SHD::readSHDOperandPtr(const U8 *ptr) {
+
+    U16 shifterU16;
+    U8 r,g,b,cvauto;
+
+    // read the cb property
+    U8 n = readU8( ptr );
+    ptr+=sizeof(U8);
+    if (n != 10) {
+        wvlog << __FILE__ << ":" << __LINE__ << " - " <<"Warning: Invalid SHDOperand!";
+        return;
+    }
+
+    r=readU8(ptr);
+    ptr+=sizeof(U8);
+    g=readU8(ptr);
+    ptr+=sizeof(U8);
+    b=readU8(ptr);
+    ptr+=sizeof(U8);
+    cvauto=readU8(ptr);
+    ptr+=sizeof(U8);
+    cvFore=(cvauto<<24)|(r<<16)|(g<<8)|(b);
+    r=readU8(ptr);
+    ptr+=sizeof(U8);
+    g=readU8(ptr);
+    ptr+=sizeof(U8);
+    b=readU8(ptr);
+    ptr+=sizeof(U8);
+    cvauto=readU8(ptr);
+    ptr+=sizeof(U8);
+    cvBack=(cvauto<<24)|(r<<16)|(g<<8)|(b);
+    shifterU16=readU16(ptr);
+    ipat=shifterU16;
+
+#ifdef WV2_DEBUG_SHD
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"cvFore: 0x" << hex << cvFore << endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"cvBack: 0x" << hex << cvBack << endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"ipat: 0x" << hex << ipat << endl;
+#endif
+}
+
+bool SHD::isShdAuto() const
+{
+    if (cvFore == 0xff000000 && cvBack == 0xff000000 && ipat == 0x0000) {
+        return true;
+    }
+    return false;
+}
+
+bool SHD::isShdNil() const
+{
+    if (cvFore == 0xffffffff && cvBack == 0xffffffff && ipat == 0x0000) {
+        return true;
+    }
+    return false;
+}
+
 bool SHD::write(OLEStreamWriter *stream, bool preservePos) const {
 
     U16 shifterU16;
@@ -612,7 +679,7 @@ bool SHD::write(OLEStreamWriter *stream, bool preservePos) const {
 
     //shifterU16=icoFore;
     //shifterU16|=icoBack << 5;
-    shifterU16|=ipat << 10;
+    shifterU16=ipat << 10;
     stream->write(shifterU16);
 
     if(preservePos)
@@ -628,9 +695,9 @@ void SHD::clear() {
 
 void SHD::dump() const
 {
-    wvlog << "Dumping SHD:" << std::endl;
-    wvlog << toString().c_str() << std::endl;
-    wvlog << "\nDumping SHD done." << std::endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"Dumping SHD:" << endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<toString().c_str() << endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"\nDumping SHD done." << endl;
 }
 
 std::string SHD::toString() const
@@ -638,7 +705,7 @@ std::string SHD::toString() const
     std::string s( "SHD:" );
     s += "\ncvFore=";
     s += uint2string( cvFore );
-    s += "\nicvBack=";
+    s += "\ncvBack=";
     s += uint2string( cvBack );
     s += "\nipat=";
     s += uint2string( ipat );
@@ -760,9 +827,9 @@ void PHE::clear() {
 
 void PHE::dump() const
 {
-    wvlog << "Dumping PHE:" << std::endl;
-    wvlog << toString().c_str() << std::endl;
-    wvlog << "\nDumping PHE done." << std::endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"Dumping PHE:" << endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<toString().c_str() << endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"\nDumping PHE done." << endl;
 }
 
 std::string PHE::toString() const
@@ -836,8 +903,8 @@ bool BRC::read(OLEStreamReader *stream, bool preservePos) {
     shifterU16>>=8;
     brcType=shifterU16;
     shifterU16=stream->readU16();
-    ico=shifterU16;
-    cv=Word97::icoToRGB(ico);
+    ico=shifterU16 & 0xFF;
+    cv=Word97::icoToCOLORREF(ico);
     shifterU16>>=8;
     dptSpace=shifterU16;
     shifterU16>>=5;
@@ -863,8 +930,8 @@ void BRC::readPtr(const U8 *ptr) {
     brcType=shifterU16;
     shifterU16=readU16(ptr);
     ptr+=sizeof(U16);
-    ico=shifterU16;
-    cv=Word97::icoToRGB(ico);
+    ico=shifterU16 & 0xFF;
+    cv=Word97::icoToCOLORREF(ico);
     shifterU16>>=8;
     dptSpace=shifterU16;
     shifterU16>>=5;
@@ -929,7 +996,7 @@ bool BRC::write(OLEStreamWriter *stream, bool preservePos) const {
 void BRC::clear() {
     dptLineWidth=0;
     brcType=0;
-    cv=0;
+    cv=cvAuto;
     dptSpace=0;
     fShadow=0;
     fFrame=0;
@@ -938,9 +1005,9 @@ void BRC::clear() {
 
 void BRC::dump() const
 {
-    wvlog << "Dumping BRC:" << std::endl;
-    wvlog << toString().c_str() << std::endl;
-    wvlog << "\nDumping BRC done." << std::endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"Dumping BRC:" << endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<toString().c_str() << endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"\nDumping BRC done." << endl;
 }
 
 std::string BRC::toString() const
@@ -1100,9 +1167,9 @@ void TLP::clear() {
 
 void TLP::dump() const
 {
-    wvlog << "Dumping TLP:" << std::endl;
-    wvlog << toString().c_str() << std::endl;
-    wvlog << "\nDumping TLP done." << std::endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"Dumping TLP:" << endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<toString().c_str() << endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"\nDumping TLP done." << endl;
 }
 
 std::string TLP::toString() const
@@ -1202,7 +1269,9 @@ bool TC::read(OLEStreamReader *stream, bool preservePos) {
     brcLeft.read(stream, false);
     brcBottom.read(stream, false);
     brcRight.read(stream, false);
-    
+    brcTL2BR.read(stream, false);
+    brcTR2BL.read(stream, false);
+
     if(preservePos)
         stream->pop();
     return true;
@@ -1233,7 +1302,7 @@ void TC::readPtr(const U8 *ptr) {
     fUnused=shifterU16;
     wUnused=readU16(ptr);
     ptr+=sizeof(U16);
-    wvlog << std::endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<endl;
     brcTop.readPtr(ptr);
     ptr+=BRC::sizeOf97;
     brcLeft.readPtr(ptr);
@@ -1241,7 +1310,7 @@ void TC::readPtr(const U8 *ptr) {
     brcBottom.readPtr(ptr);
     ptr+=BRC::sizeOf97;
     brcRight.readPtr(ptr);
-    ptr+=BRC::sizeOf;
+    ptr+=BRC::sizeOf97;
 }
 
 bool TC::write(OLEStreamWriter *stream, bool preservePos) const {
@@ -1266,6 +1335,8 @@ bool TC::write(OLEStreamWriter *stream, bool preservePos) const {
     brcLeft.write(stream, false);
     brcBottom.write(stream, false);
     brcRight.write(stream, false);
+    brcTL2BR.write(stream, false);
+    brcTR2BL.write(stream, false);
 
     if(preservePos)
         stream->pop();
@@ -1287,13 +1358,15 @@ void TC::clear() {
     brcLeft.clear();
     brcBottom.clear();
     brcRight.clear();
+    brcTL2BR.clear();
+    brcTR2BL.clear();
 }
 
 void TC::dump() const
 {
-    wvlog << "Dumping TC:" << std::endl;
-    wvlog << toString().c_str() << std::endl;
-    wvlog << "\nDumping TC done." << std::endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"Dumping TC:" << endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<toString().c_str() << endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"\nDumping TC done." << endl;
 }
 
 std::string TC::toString() const
@@ -1327,6 +1400,10 @@ std::string TC::toString() const
     s += "\n{" + brcBottom.toString() + "}\n";
     s += "\nbrcRight=";
     s += "\n{" + brcRight.toString() + "}\n";
+    s += "\nbrcTL2BR=";
+    s += "\n{" + brcTL2BR.toString() + "}\n";
+    s += "\nbrcTR2BL=";
+    s += "\n{" + brcTR2BL.toString() + "}\n";
     s += "\nTC Done.";
     return s;
 }
@@ -1346,7 +1423,9 @@ bool operator==(const TC &lhs, const TC &rhs) {
            lhs.brcTop==rhs.brcTop &&
            lhs.brcLeft==rhs.brcLeft &&
            lhs.brcBottom==rhs.brcBottom &&
-           lhs.brcRight==rhs.brcRight;
+           lhs.brcRight==rhs.brcRight &&
+           lhs.brcTL2BR==rhs.brcTL2BR &&
+           lhs.brcTR2BL==rhs.brcTR2BL;
 }
 
 bool operator!=(const TC &lhs, const TC &rhs) {
@@ -1365,6 +1444,7 @@ TAP::TAP(OLEStreamReader *stream, bool preservePos) : Shared() {
     read(stream, preservePos);
 }
 
+/* TODO: updated required! */
 bool TAP::read(OLEStreamReader *stream, bool preservePos) {
 
     U16 shifterU16;
@@ -1373,11 +1453,15 @@ bool TAP::read(OLEStreamReader *stream, bool preservePos) {
         stream->push();
 
     jc=stream->readS16();
-    dxaGapHalf=stream->readS32();
+    dxaLeft=stream->readS16();
+    dxaGapHalf=stream->readS16();
+    widthIndent=stream->readS16();
     dyaRowHeight=stream->readS32();
     fCantSplit=stream->readU8();
     fTableHeader=stream->readU8();
     tlp.read(stream, false);
+    dxaAbs=stream->readS16();
+    dyaAbs=stream->readS16();
     lwHTMLProps=stream->readS32();
     shifterU16=stream->readU16();
     fCaFull=shifterU16;
@@ -1393,6 +1477,8 @@ bool TAP::read(OLEStreamReader *stream, bool preservePos) {
     dxaAdjust=stream->readS32();
     dxaScale=stream->readS32();
     dxsInch=stream->readS32();
+    dxaFromText=stream->readU16();
+    dxaFromTextRight=stream->readU16();
     // skipping the std::vector rgdxaCenter
     // skipping the std::vector rgdxaCenterPrint
     // skipping the std::vector rgtc
@@ -1405,6 +1491,7 @@ bool TAP::read(OLEStreamReader *stream, bool preservePos) {
     return true;
 }
 
+/* TODO: updated required! */
 bool TAP::write(OLEStreamWriter *stream, bool preservePos) const {
 
     U16 shifterU16;
@@ -1413,11 +1500,15 @@ bool TAP::write(OLEStreamWriter *stream, bool preservePos) const {
         stream->push();
 
     stream->write(jc);
+    stream->write(dxaLeft);
     stream->write(dxaGapHalf);
+    stream->write(widthIndent);
     stream->write(dyaRowHeight);
     stream->write(fCantSplit);
     stream->write(fTableHeader);
     tlp.write(stream, false);
+    stream->write(dxaAbs);
+    stream->write(dyaAbs);
     stream->write(lwHTMLProps);
     shifterU16=fCaFull;
     shifterU16|=fFirstRow << 1;
@@ -1429,6 +1520,8 @@ bool TAP::write(OLEStreamWriter *stream, bool preservePos) const {
     stream->write(dxaAdjust);
     stream->write(dxaScale);
     stream->write(dxsInch);
+    stream->write(dxaFromText);
+    stream->write(dxaFromTextRight);
     // skipping the std::vector rgdxaCenter
     // skipping the std::vector rgdxaCenterPrint
     // skipping the std::vector rgtc
@@ -1443,11 +1536,18 @@ bool TAP::write(OLEStreamWriter *stream, bool preservePos) const {
 
 void TAP::clear() {
     jc=0;
+    dxaLeft=0;
     dxaGapHalf=0;
+    widthIndent=0;
     dyaRowHeight=0;
     fCantSplit=0;
     fTableHeader=0;
     tlp.clear();
+    fBiDi=0;
+    pcVert=0;
+    pcHorz=0;
+    dxaAbs=0;
+    dyaAbs=0;
     lwHTMLProps=0;
     fCaFull=0;
     fFirstRow=0;
@@ -1458,19 +1558,26 @@ void TAP::clear() {
     dxaAdjust=0;
     dxaScale=0;
     dxsInch=0;
+    dxaFromText=0;
+    dyaFromText=0;
+    dxaFromTextRight=0;
+    dyaFromTextBottom=0;
+    textWrap=0;
     rgdxaCenter.clear();
     rgdxaCenterPrint.clear();
     rgtc.clear();
     rgshd.clear();
     for(int _i=0; _i<(6); ++_i)
         rgbrcTable[_i].clear();
+    padHorz=0;
+    padVert=0;
 }
 
 void TAP::dump() const
 {
-    wvlog << "Dumping TAP:" << std::endl;
-    wvlog << toString().c_str() << std::endl;
-    wvlog << "\nDumping TAP done." << std::endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"Dumping TAP:" << endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<toString().c_str() << endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"\nDumping TAP done." << endl;
 }
 
 std::string TAP::toString() const
@@ -1478,8 +1585,12 @@ std::string TAP::toString() const
     std::string s( "TAP:" );
     s += "\njc=";
     s += int2string( jc );
+    s += "\ndxaLeft=";
+    s += int2string( dxaLeft );
     s += "\ndxaGapHalf=";
     s += int2string( dxaGapHalf );
+    s += "\nwidthIndent=";
+    s += int2string( widthIndent );
     s += "\ndyaRowHeight=";
     s += int2string( dyaRowHeight );
     s += "\nfCantSplit=";
@@ -1488,6 +1599,16 @@ std::string TAP::toString() const
     s += uint2string( fTableHeader );
     s += "\ntlp=";
     s += "\n{" + tlp.toString() + "}\n";
+    s += "\nfBiDi=";
+    s += uint2string( fBiDi );
+    s += "\npcVert=";
+    s += uint2string( pcVert );
+    s += "\npcHorz=";
+    s += uint2string( pcHorz );
+    s += "\ndxaAbs=";
+    s += int2string( dxaAbs );
+    s += "\ndyaAbs=";
+    s += int2string( dyaAbs );
     s += "\nlwHTMLProps=";
     s += int2string( lwHTMLProps );
     s += "\nfCaFull=";
@@ -1508,7 +1629,21 @@ std::string TAP::toString() const
     s += int2string( dxaScale );
     s += "\ndxsInch=";
     s += int2string( dxsInch );
+    s += "\ndxaFromText=";
+    s += uint2string( dxaFromText );
+    s += "\ndyaFromText=";
+    s += uint2string( dyaFromText );
+    s += "\ndxaFromTextRight=";
+    s += uint2string( dxaFromTextRight );
+    s += "\ndyaFromTextBottom=";
+    s += uint2string( dyaFromTextBottom );
+    s += "\ntextWrap=";
+    s += uint2string( textWrap );
     s += "\nrgdxaCenter=";
+    for(uint i = 0; i < rgdxaCenter.size(); i++) {
+        s += "\nrgdxaCenter[" + int2string( i ) + "]=";
+        s += int2string(rgdxaCenter[i]);
+    }
     // skipping the std::vector rgdxaCenter
     s += "\nrgdxaCenterPrint=";
     // skipping the std::vector rgdxaCenterPrint
@@ -1518,8 +1653,13 @@ std::string TAP::toString() const
     // skipping the std::vector rgshd
     for(int _i=0; _i<(6); ++_i) {
         s += "\nrgbrcTable[" + int2string( _i ) + "]=";
-    s += "\n{" + rgbrcTable[_i].toString() + "}\n";
+        s += "\n{" + rgbrcTable[_i].toString() + "}\n";
     }
+    s += "\npadHorz=";
+    s += uint2string( padHorz );
+    s += "\npadVert=";
+    s += uint2string( padVert );
+    s += "\n";
     s += "\nTAP Done.";
     return s;
 }
@@ -1532,7 +1672,9 @@ bool operator==(const TAP &lhs, const TAP &rhs) {
     }
 
     return lhs.jc==rhs.jc &&
+           lhs.dxaLeft==rhs.dxaLeft &&
            lhs.dxaGapHalf==rhs.dxaGapHalf &&
+           lhs.widthIndent==rhs.widthIndent &&
            lhs.dyaRowHeight==rhs.dyaRowHeight &&
            lhs.fCantSplit==rhs.fCantSplit &&
            lhs.fTableHeader==rhs.fTableHeader &&
@@ -1789,9 +1931,9 @@ void ANLD::clear() {
 
 void ANLD::dump() const
 {
-    wvlog << "Dumping ANLD:" << std::endl;
-    wvlog << toString().c_str() << std::endl;
-    wvlog << "\nDumping ANLD done." << std::endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"Dumping ANLD:" << endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<toString().c_str() << endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"\nDumping ANLD done." << endl;
 }
 
 std::string ANLD::toString() const
@@ -2109,9 +2251,9 @@ void ANLV::clear() {
 
 void ANLV::dump() const
 {
-    wvlog << "Dumping ANLV:" << std::endl;
-    wvlog << toString().c_str() << std::endl;
-    wvlog << "\nDumping ANLV done." << std::endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"Dumping ANLV:" << endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<toString().c_str() << endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"\nDumping ANLV done." << endl;
 }
 
 std::string ANLV::toString() const
@@ -2521,6 +2663,8 @@ bool operator!=(const BKD &lhs, const BKD &rhs) {
 
 // BKF implementation
 
+const unsigned int BKF::sizeOf = 4;
+
 BKF::BKF() {
     clear();
 }
@@ -2594,6 +2738,8 @@ bool operator!=(const BKF &lhs, const BKF &rhs) {
 
 
 // BKL implementation
+
+const unsigned int BKL::sizeOf = 2;
 
 BKL::BKL() {
     clear();
@@ -3097,14 +3243,20 @@ void CHP::clear() {
         xstDispFldRMark[_i]=0;
     shd.clear();
     brc.clear();
-    cv=0;
+    cv=cvAuto;
+    cvUl=cvAuto;
+    fTNY=0;
+    fTNYCompress=0;
+    picBulletCP=0;
+    fPicBullet=0;
+    fNoAutoSize=0;
 }
 
 void CHP::dump() const
 {
-    wvlog << "Dumping CHP:" << std::endl;
-    wvlog << toString().c_str() << std::endl;
-    wvlog << "\nDumping CHP done." << std::endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"Dumping CHP:" << endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<toString().c_str() << endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"\nDumping CHP done." << endl;
 }
 
 std::string CHP::toString() const
@@ -3262,14 +3414,24 @@ std::string CHP::toString() const
     s += int2string( ibstDispFldRMark );
     s += "\ndttmDispFldRMark=";
     s += uint2string( dttmDispFldRMark );
+    s += "\nfTNY=";
+    s += uint2string( fTNY );
+    s += "\nfTNYCompress=";
+    s += uint2string( fTNYCompress );
     for(int _i=0; _i<(16); ++_i) {
         s += "\nxstDispFldRMark[" + int2string( _i ) + "]=";
-    s += uint2string( xstDispFldRMark[_i] );
+        s += uint2string( xstDispFldRMark[_i] );
     }
     s += "\nshd=";
     s += "\n{" + shd.toString() + "}\n";
     s += "\nbrc=";
     s += "\n{" + brc.toString() + "}\n";
+    s += "\npicBulletCP=";
+    s += uint2string(picBulletCP);
+    s += "\nfPicBullet=";
+    s += uint2string(fPicBullet);
+    s += "\nfNoAutoSize=";
+    s += uint2string(fNoAutoSize);
     s += "\nCHP Done.";
     return s;
 }
@@ -3313,6 +3475,7 @@ bool operator==(const CHP &lhs, const CHP &rhs) {
            lhs.kul==rhs.kul &&
            lhs.fSpecSymbol==rhs.fSpecSymbol &&
            lhs.cv==rhs.cv &&
+           lhs.cvUl==rhs.cvUl &&
            lhs.unused23_5==rhs.unused23_5 &&
            lhs.fSysVanish==rhs.fSysVanish &&
            lhs.hpScript==rhs.hpScript &&
@@ -3359,7 +3522,9 @@ bool operator==(const CHP &lhs, const CHP &rhs) {
            lhs.ibstDispFldRMark==rhs.ibstDispFldRMark &&
            lhs.dttmDispFldRMark==rhs.dttmDispFldRMark &&
            lhs.shd==rhs.shd &&
-           lhs.brc==rhs.brc;
+           lhs.brc==rhs.brc&&
+           lhs.fTNY==rhs.fTNY &&
+           lhs.fTNYCompress==rhs.fTNYCompress;
 }
 
 bool operator!=(const CHP &lhs, const CHP &rhs) {
@@ -3439,9 +3604,9 @@ void DCS::clear() {
 
 void DCS::dump() const
 {
-    wvlog << "Dumping DCS:" << std::endl;
-    wvlog << toString().c_str() << std::endl;
-    wvlog << "\nDumping DCS done." << std::endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"Dumping DCS:" << endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<toString().c_str() << endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"\nDumping DCS done." << endl;
 }
 
 std::string DCS::toString() const
@@ -4306,9 +4471,11 @@ bool FIB::read(OLEStreamReader *stream, bool preservePos) {
 
     U8 shifterU8;
     U16 shifterU16;
+    int start = stream->tell();
 
-    if(preservePos)
+    if (preservePos) {
         stream->push();
+    }
 
     wIdent=stream->readU16();
     nFib=stream->readU16();
@@ -4586,9 +4753,79 @@ bool FIB::read(OLEStreamReader *stream, bool preservePos) {
     fcSttbfUssr=stream->readU32();
     lcbSttbfUssr=stream->readU32();
 
-    if(preservePos)
+    //sizeof(base) + sizeof(csw) + sizeof(clw) + sizeof(cfclcb) +
+    //sizeof(fibRgW) + sizeof(fibRgLw) + sizeof(fibRgFcLcbBlob)
+    int expected = 32 + 6 + (csw * 2) + (clw * 4) + (cfclcb * 8);
+    int n = stream->tell() - start;
+#ifdef WV2_DEBUG_FIB
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"FIB bytes expected:" << expected << endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"FIB bytes read:" << n << endl;
+#endif
+    if ((expected - n) > 0) {
+        stream->seek( (expected - n), WV2_SEEK_SET );
+    }
+    //this is new compared to Word6/Word8
+    cswNew=stream->readU16();
+
+    if (preservePos) {
         stream->pop();
+    }
+
     return true;
+}
+
+bool FIB::valid() const
+{
+    bool valid = true;
+    if (csw != 0x000e) {
+        wvlog << __FILE__ << ":" << __LINE__ << " - " <<"Warning: fibRgW count:" << csw << "| expected: 14" << endl;
+        valid = false;
+    }
+    if (clw != 0x0016) {
+        wvlog << __FILE__ << ":" << __LINE__ << " - " <<"Warning: fibRgLw count:" << clw << "| expected: 22" << endl;
+        valid = false;
+    }
+    switch (nFib) {
+    case Word8nFib:
+    case Word8nFib0:
+    case Word8nFib2:
+        if (cfclcb != 0x005D) {
+            wvlog << __FILE__ << ":" << __LINE__ << " - " <<"Warning: fibRgFcLcbBlob count:" << cfclcb << "| expected: 93" << endl;
+            valid = false;
+        }
+        break;
+    case Word2knFib:
+        if (cfclcb != 0x006C) {
+            wvlog << __FILE__ << ":" << __LINE__ << " - " <<"Warning: fibRgFcLcbBlob count:" << cfclcb << "| expected: 108" << endl;
+            valid = false;
+        }
+        break;
+    case Word2k2nFib:
+        if (cfclcb != 0x0088) {
+            wvlog << __FILE__ << ":" << __LINE__ << " - " <<"Warning: fibRgFcLcbBlob count:" << cfclcb << "| expected: 136" << endl;
+            valid = false;
+        }
+        break;
+    case Word2k3nFib:
+        if (cfclcb != 0x00A4) {
+            wvlog << __FILE__ << ":" << __LINE__ << " - " <<"Warning: fibRgFcLcbBlob count:" << cfclcb << "| expected: 164" << endl;
+            valid = false;
+        }
+        break;
+    case Word2k7nFib:
+        if (cfclcb != 0x00B7) {
+            wvlog << __FILE__ << ":" << __LINE__ << " - " <<"Warning: fibRgFcLcbBlob count:" << cfclcb << "| expected: 183" << endl;
+            valid = false;
+        }
+        break;
+    default:
+        wvlog << __FILE__ << ":" << __LINE__ << " - " <<"Warning: A document < Word8, complete validation not supported!";
+        break;
+    }
+    if (cswNew) {
+        wvlog << __FILE__ << ":" << __LINE__ << " - " <<"Warning: A document > Word8, Dop > Dop97 not supported!";
+    }
+    return valid;
 }
 
 bool FIB::write(OLEStreamWriter *stream, bool preservePos) const {
@@ -5120,6 +5357,7 @@ void FIB::clear() {
     lcbSttbListNames=0;
     fcSttbfUssr=0;
     lcbSttbfUssr=0;
+    cswNew=0;
 }
 
 bool operator==(const FIB &lhs, const FIB &rhs) {
@@ -5379,7 +5617,8 @@ bool operator==(const FIB &lhs, const FIB &rhs) {
            lhs.fcSttbListNames==rhs.fcSttbListNames &&
            lhs.lcbSttbListNames==rhs.lcbSttbListNames &&
            lhs.fcSttbfUssr==rhs.fcSttbfUssr &&
-           lhs.lcbSttbfUssr==rhs.lcbSttbfUssr;
+           lhs.lcbSttbfUssr==rhs.lcbSttbfUssr &&
+           lhs.cswNew==rhs.cswNew;
 }
 
 bool operator!=(const FIB &lhs, const FIB &rhs) {
@@ -5881,9 +6120,9 @@ void LSPD::clear() {
 
 void LSPD::dump() const
 {
-    wvlog << "Dumping LSPD:" << std::endl;
-    wvlog << toString().c_str() << std::endl;
-    wvlog << "\nDumping LSPD done." << std::endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"Dumping LSPD:" << endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<toString().c_str() << endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"\nDumping LSPD done." << endl;
 }
 
 std::string LSPD::toString() const
@@ -6176,9 +6415,9 @@ void METAFILEPICT::clear() {
 
 void METAFILEPICT::dump() const
 {
-    wvlog << "Dumping METAFILEPICT:" << std::endl;
-    wvlog << toString().c_str() << std::endl;
-    wvlog << "\nDumping METAFILEPICT done." << std::endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"Dumping METAFILEPICT:" << endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<toString().c_str() << endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"\nDumping METAFILEPICT done." << endl;
 }
 
 std::string METAFILEPICT::toString() const
@@ -6321,9 +6560,9 @@ void NUMRM::clear() {
 
 void NUMRM::dump() const
 {
-    wvlog << "Dumping NUMRM:" << std::endl;
-    wvlog << toString().c_str() << std::endl;
-    wvlog << "\nDumping NUMRM done." << std::endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"Dumping NUMRM:" << endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<toString().c_str() << endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"\nDumping NUMRM done." << endl;
 }
 
 std::string NUMRM::toString() const
@@ -6539,9 +6778,9 @@ void OLST::clear() {
 
 void OLST::dump() const
 {
-    wvlog << "Dumping OLST:" << std::endl;
-    wvlog << toString().c_str() << std::endl;
-    wvlog << "\nDumping OLST done." << std::endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"Dumping OLST:" << endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<toString().c_str() << endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"\nDumping OLST done." << endl;
 }
 
 std::string OLST::toString() const
@@ -6636,6 +6875,8 @@ bool PAP::read(OLEStreamReader *stream, bool preservePos) {
     unused17=stream->readU8();
     fNoAutoHyph=stream->readU8();
     fWidowControl=stream->readU8();
+    dyaBeforeAuto=stream->readU8();
+    dyaAfterAuto=stream->readU8();
     dxaRight=stream->readS32();
     dxaLeft=stream->readS32();
     dxaLeft1=stream->readS32();
@@ -6700,6 +6941,7 @@ bool PAP::read(OLEStreamReader *stream, bool preservePos) {
     return true;
 }
 
+//TODO: update required!
 bool PAP::write(OLEStreamWriter *stream, bool preservePos) const {
 
     U8 shifterU8;
@@ -6731,6 +6973,8 @@ bool PAP::write(OLEStreamWriter *stream, bool preservePos) const {
     stream->write(unused17);
     stream->write(fNoAutoHyph);
     stream->write(fWidowControl);
+    stream->write(dyaBeforeAuto);
+    stream->write(dyaAfterAuto);
     stream->write(dxaRight);
     stream->write(dxaLeft);
     stream->write(dxaLeft1);
@@ -6791,6 +7035,7 @@ bool PAP::write(OLEStreamWriter *stream, bool preservePos) const {
     return true;
 }
 
+//TODO: update required!
 void PAP::clear() {
     istd=0;
     jc=0;
@@ -6814,6 +7059,8 @@ void PAP::clear() {
     unused17=0;
     fNoAutoHyph=0;
     fWidowControl=1;
+    dyaBeforeAuto=0;
+    dyaAfterAuto=0;
     dxaRight=0;
     dxaLeft=0;
     dxaLeft1=0;
@@ -6839,6 +7086,10 @@ void PAP::clear() {
     unused70=0;
     fInTable=0;
     fTtp=0;
+    itap=0;
+    dtap=0;
+    fInnerTableCell=0;
+    fInnerTtp=0;
     wr=0;
     fLocked=0;
     ptap=0;
@@ -6858,6 +7109,7 @@ void PAP::clear() {
     shd.clear();
     dcs.clear();
     lvl=9;
+    fBiDi = 0;
     fNumRMIns=0;
     anld.clear();
     fPropRMark=0;
@@ -6870,9 +7122,9 @@ void PAP::clear() {
 
 void PAP::dump() const
 {
-    wvlog << "Dumping PAP:" << std::endl;
-    wvlog << toString().c_str() << std::endl;
-    wvlog << "\nDumping PAP done." << std::endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"Dumping PAP:" << endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<toString().c_str() << endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"\nDumping PAP done." << endl;
 }
 
 std::string PAP::toString() const
@@ -6922,6 +7174,10 @@ std::string PAP::toString() const
     s += uint2string( fNoAutoHyph );
     s += "\nfWidowControl=";
     s += uint2string( fWidowControl );
+    s += "\ndyaBeforeAuto=";
+    s += uint2string( dyaBeforeAuto );
+    s += "\ndyaAfterAuto=";
+    s += uint2string( dyaAfterAuto );
     s += "\ndxaRight=";
     s += int2string( dxaRight );
     s += "\ndxaLeft=";
@@ -6968,10 +7224,6 @@ std::string PAP::toString() const
     s += uint2string( unused68_3 );
     s += "\nunused70=";
     s += uint2string( unused70 );
-    s += "\nfInTable=";
-    s += int2string( fInTable );
-    s += "\nfTtp=";
-    s += int2string( fTtp );
     s += "\nwr=";
     s += uint2string( wr );
     s += "\nfLocked=";
@@ -7026,8 +7278,23 @@ std::string PAP::toString() const
     s += "\n{" + numrm.toString() + "}\n";
     s += "\nitbdMac=";
     s += int2string( itbdMac );
-    s += "\nrgdxaTab=";
+    s += "\nrgdxaTab.size()=";
+    s += int2string( rgdxaTab.size() );
     // skipping the std::vector rgdxaTab
+    s += "\n------------------------------";
+    s += "\nfInTable=";
+    s += int2string( fInTable );
+    s += "\nfTtp=";
+    s += int2string( fTtp );
+    s += "\nitap=";
+    s += int2string( itap );
+    s += "\ndtap=";
+    s += int2string( dtap );
+    s += "\nfInnerTableCell=";
+    s += int2string( fInnerTableCell );
+    s += "\nfInnerTtp=";
+    s += int2string( fInnerTtp );
+    s += "\n------------------------------";
     s += "\nPAP Done.";
     return s;
 }
@@ -7056,6 +7323,8 @@ bool operator==(const PAP &lhs, const PAP &rhs) {
            lhs.unused17==rhs.unused17 &&
            lhs.fNoAutoHyph==rhs.fNoAutoHyph &&
            lhs.fWidowControl==rhs.fWidowControl &&
+           lhs.dyaBeforeAuto==rhs.dyaBeforeAuto &&
+           lhs.dyaAfterAuto==rhs.dyaAfterAuto &&
            lhs.dxaRight==rhs.dxaRight &&
            lhs.dxaLeft==rhs.dxaLeft &&
            lhs.dxaLeft1==rhs.dxaLeft1 &&
@@ -7079,8 +7348,6 @@ bool operator==(const PAP &lhs, const PAP &rhs) {
            lhs.fRotateFont==rhs.fRotateFont &&
            lhs.unused68_3==rhs.unused68_3 &&
            lhs.unused70==rhs.unused70 &&
-           lhs.fInTable==rhs.fInTable &&
-           lhs.fTtp==rhs.fTtp &&
            lhs.wr==rhs.wr &&
            lhs.fLocked==rhs.fLocked &&
            lhs.ptap==rhs.ptap &&
@@ -7108,7 +7375,13 @@ bool operator==(const PAP &lhs, const PAP &rhs) {
            lhs.dttmPropRMark==rhs.dttmPropRMark &&
            lhs.numrm==rhs.numrm &&
            lhs.itbdMac==rhs.itbdMac &&
-           lhs.rgdxaTab==rhs.rgdxaTab;
+           lhs.rgdxaTab==rhs.rgdxaTab &&
+           lhs.fInTable==rhs.fInTable &&
+           lhs.fTtp==rhs.fTtp &&
+           lhs.itap==rhs.itap &&
+           lhs.dtap==rhs.dtap &&
+           lhs.fInnerTableCell==rhs.fInnerTableCell &&
+           lhs.fInnerTtp==rhs.fInnerTtp;
 }
 
 bool operator!=(const PAP &lhs, const PAP &rhs) {
@@ -7554,9 +7827,9 @@ void PICF::clear() {
 
 void PICF::dump() const
 {
-    wvlog << "Dumping PICF:" << std::endl;
-    wvlog << toString().c_str() << std::endl;
-    wvlog << "\nDumping PICF done." << std::endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"Dumping PICF:" << endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<toString().c_str() << endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"\nDumping PICF done." << endl;
 }
 
 std::string PICF::toString() const
@@ -7932,6 +8205,8 @@ bool SEP::read(OLEStreamReader *stream, bool preservePos) {
     fLayout=stream->readU8();
     unused490=stream->readU16();
     olstAnm.read(stream, false);
+    nfcFtnRef=stream->readU16();
+    nfcEdnRef=stream->readU16();
 
     if(preservePos)
         stream->pop();
@@ -8007,6 +8282,8 @@ bool SEP::write(OLEStreamWriter *stream, bool preservePos) const {
     stream->write(fLayout);
     stream->write(unused490);
     olstAnm.write(stream, false);
+    stream->write(nfcFtnRef);
+    stream->write(nfcEdnRef);
 
     if(preservePos)
         stream->pop();
@@ -8075,13 +8352,15 @@ void SEP::clear() {
     fLayout=0;
     unused490=0;
     olstAnm.clear();
+    nfcFtnRef=0;
+    nfcEdnRef=0;
 }
 
 void SEP::dump() const
 {
-    wvlog << "Dumping SEP:" << std::endl;
-    wvlog << toString().c_str() << std::endl;
-    wvlog << "\nDumping SEP done." << std::endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"Dumping SEP:" << endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<toString().c_str() << endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"\nDumping SEP done." << endl;
 }
 
 std::string SEP::toString() const
@@ -8209,6 +8488,10 @@ std::string SEP::toString() const
     s += uint2string( unused490 );
     s += "\nolstAnm=";
     s += "\n{" + olstAnm.toString() + "}\n";
+    s += "\nnfcFtnRef=";
+    s += uint2string( nfcFtnRef );
+    s += "\nnfcEdnRef=";
+    s += uint2string( nfcEdnRef );
     s += "\nSEP Done.";
     return s;
 }
@@ -8275,7 +8558,9 @@ bool operator==(const SEP &lhs, const SEP &rhs) {
            lhs.dmOrientFirst==rhs.dmOrientFirst &&
            lhs.fLayout==rhs.fLayout &&
            lhs.unused490==rhs.unused490 &&
-           lhs.olstAnm==rhs.olstAnm;
+           lhs.olstAnm==rhs.olstAnm &&
+           lhs.nfcFtnRef==rhs.nfcFtnRef &&
+           lhs.nfcEdnRef==rhs.nfcEdnRef;
 }
 
 bool operator!=(const SEP &lhs, const SEP &rhs) {
@@ -8441,6 +8726,19 @@ void STSHI::clear() {
     nVerBuiltInNamesWhenSaved=0;
     for(int _i=0; _i<(3); ++_i)
         rgftcStandardChpStsh[_i]=0;
+}
+
+void STSHI::dump() const
+{
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"Dumping STSHI:" <<
+    "\ncstd= 0x" << hex << cstd << dec << "(" << cstd << ")" <<
+    "\ncbSTDBaseInFile=" << cbSTDBaseInFile <<
+    "\nfStdStylenamesWritten=" << fStdStylenamesWritten <<
+    "\nstiMaxWhenSaved= 0x" << hex << stiMaxWhenSaved <<
+     dec << "(" << stiMaxWhenSaved  << ")" <<
+    "\nistdMaxFixedWhenSaved= 0x" << hex << istdMaxFixedWhenSaved <<
+    "\nnVerBuiltInNamesWhenSaved=" << dec << nVerBuiltInNamesWhenSaved <<
+    "\nDumping STSHI done:" << endl;
 }
 
 bool operator==(const STSHI &lhs, const STSHI &rhs) {

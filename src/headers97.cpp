@@ -12,7 +12,7 @@
 
    You should have received a copy of the GNU Library General Public License
    along with this library; see the file COPYING.LIB.  If not, write to
-   the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
+   the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
    Boston, MA 02111-1307, USA.
 */
 
@@ -20,13 +20,19 @@
 
 using namespace wvWare;
 
-Headers97::Headers97( U32 fcPlcfhdd, U32 lcbPlcfhdd, OLEStreamReader* tableStream ) :
-    Headers( fcPlcfhdd, lcbPlcfhdd, tableStream, Word8 )
+Headers97::Headers97( U32 ccpHdd, U32 fcPlcfhdd, U32 lcbPlcfhdd, U32 fcPlcfsed, U32 lcbPlcfsed,
+                      OLEStreamReader* tableStream ) :
+    Headers( ccpHdd, fcPlcfhdd, lcbPlcfhdd, fcPlcfsed, lcbPlcfsed, tableStream, Word8 )
 {
 }
 
 std::pair<U32, U32> Headers97::findHeader( int sectionNumber, unsigned char mask ) const
 {
+    // NOTE: An empty header/footer story specifies that the previous section's
+    // header/footer of the corresponding type is used.  For the first section,
+    // an empty header/footer story specifies that it does not have a
+    // header/footer of this type.  MS-DOC, p.34
+
     U32 start = 0;
     U32 lim = 0;
     const int offset = maskToOffset( mask );

@@ -12,7 +12,7 @@
 
    You should have received a copy of the GNU Library General Public License
    along with this library; see the file COPYING.LIB.  If not, write to
-   the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
+   the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
    Boston, MA 02111-1307, USA.
 */
 
@@ -28,6 +28,10 @@ using namespace wvWare;
 FontCollection::FontCollection( OLEStreamReader* reader, const Word97::FIB& fib )
 {
     m_fallbackFont = new Word97::FFN();
+    if (!m_fallbackFont) {
+        wvlog << __FILE__ << ":" << __LINE__ << " - " <<"Error: FFN allocation!";
+        return;
+    }
     m_fallbackFont->xszFfn = "Helvetica";
 
     reader->push();
@@ -37,6 +41,13 @@ FontCollection::FontCollection( OLEStreamReader* reader, const Word97::FIB& fib 
         int bytesLeft = reader->readU16() - 2;
         while ( bytesLeft > 0 ) {
             Word97::FFN* ffn = new Word97::FFN( reader, Word97::FFN::Word95, false );
+
+            if (!ffn) {
+                wvlog << __FILE__ << ":" << __LINE__ << " - " <<"Error: FFN allocation!";
+                reader->pop();
+                return;
+            }
+
             m_fonts.push_back( ffn );
             bytesLeft -= ffn->cbFfnM1 + 1;
         }
@@ -44,16 +55,26 @@ FontCollection::FontCollection( OLEStreamReader* reader, const Word97::FIB& fib 
     else { // Word97 or newer
         const U16 count = reader->readU16();
         const U16 extraData = reader->readU16();
-        if ( extraData != 0 )
-            wvlog << "Huh?? Found STTBF extra data within the STTBF of FFNs" << std::endl;
+        if ( extraData != 0 ) {
+            wvlog << __FILE__ << ":" << __LINE__ << " - " <<"Huh?? Found STTBF extra data within the STTBF of FFNs" << endl;
+        }
+        for ( int i = 0; i < count; ++i ) {
+            Word97::FFN* ffn = new Word97::FFN( reader, Word97::FFN::Word97, false );
 
-        for ( int i = 0; i < count; ++i )
-            m_fonts.push_back( new Word97::FFN( reader, Word97::FFN::Word97, false ) );
+            if (!ffn) {
+                wvlog << __FILE__ << ":" << __LINE__ << " - " <<"Error: FFN allocation!";
+                reader->pop();
+                return;
+            }
+
+            m_fonts.push_back( ffn );
+        }
     }
 
-    if ( reader->tell() - fib.fcSttbfffn != fib.lcbSttbfffn )
-        wvlog << "Warning: Didn't read lcbSttbfffn bytes: read=" << reader->tell() - fib.fcSttbfffn
-              << " lcbSttbfffn=" << fib.lcbSttbfffn << std::endl;
+    if ( reader->tell() - fib.fcSttbfffn != fib.lcbSttbfffn ) {
+        wvlog << __FILE__ << ":" << __LINE__ << " - " <<"Warning: Didn't read lcbSttbfffn bytes: read=" << reader->tell() - fib.fcSttbfffn
+              << " lcbSttbfffn=" << fib.lcbSttbfffn << endl;
+    }
     reader->pop();
 }
 
@@ -65,8 +86,9 @@ FontCollection::~FontCollection()
 
 const Word97::FFN& FontCollection::font( S16 ftc ) const
 {
-    if ( ftc >= 0 && static_cast<U16>( ftc ) < m_fonts.size() )
+    if ( ftc >= 0 && static_cast<U16>( ftc ) < m_fonts.size() ) {
         return *m_fonts[ ftc ];
+    }
     return *m_fallbackFont;
 }
 
@@ -75,8 +97,9 @@ void FontCollection::dump() const
     std::vector<Word97::FFN*>::const_iterator it = m_fonts.begin();
     std::vector<Word97::FFN*>::const_iterator end = m_fonts.end();
     for ( ; it != end; ++it ) {
-        wvlog << "Font: xszFfn='" << ( *it )->xszFfn.ascii() << "'" << std::endl;
-        if ( !( *it )->xszFfnAlt.isEmpty() )
-            wvlog << "      xszFfnAlt='" << ( *it )->xszFfnAlt.ascii() << "'" << std::endl;
+        wvlog << __FILE__ << ":" << __LINE__ << " - " <<"Font: xszFfn='" << ( *it )->xszFfn.ascii() << "'" << endl;
+        if ( !( *it )->xszFfnAlt.isEmpty() ) {
+            wvlog << __FILE__ << ":" << __LINE__ << " - " <<"      xszFfnAlt='" << ( *it )->xszFfnAlt.ascii() << "'" << endl;
+        }
     }
 }

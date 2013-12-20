@@ -12,7 +12,7 @@
 
    You should have received a copy of the GNU Library General Public License
    along with this library; see the file COPYING.LIB.  If not, write to
-   the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
+   the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
    Boston, MA 02111-1307, USA.
 */
 
@@ -34,6 +34,7 @@
 #include "ustring.h"
 #include <vector> // for Word97::PAP
 
+#include "wv2_export.h"
 namespace wvWare {
 
 class OLEStreamReader;
@@ -43,10 +44,15 @@ class Style;
 
 namespace Word97 {
 
-   /**
-    * Helper function to convert ico color codes to 24bit rgb values
-    */
-    U32 icoToRGB(U16 ico);
+    /**
+     * The default value for a COLORREF required in TAP and PAP.
+     */
+    const U32 cvAuto = 0xff000000;
+
+    /**
+     * Helper function to convert ico color codes to 24bit COLORREF
+     */
+    U32 icoToCOLORREF(U16 ico);
 
 /**
  * Font Family Name (FFN), this code is located in the template-Word97.h
@@ -76,7 +82,7 @@ struct FFN {
     bool write(OLEStreamWriter *stream, bool preservePos=false) const;
 
     /**
-     * Set all the fields to the inital value (default is 0)
+     * Set all the fields to the initial value (default is 0)
      */
     void clear();
 
@@ -260,7 +266,7 @@ struct DTTM {
     bool write(OLEStreamWriter *stream, bool preservePos=false) const;
 
     /**
-     * Set all the fields to the inital value (default is 0)
+     * Set all the fields to the initial value (default is 0)
      */
     void clear();
 
@@ -348,7 +354,7 @@ struct DOPTYPOGRAPHY {
     bool write(OLEStreamWriter *stream, bool preservePos=false) const;
 
     /**
-     * Set all the fields to the inital value (default is 0)
+     * Set all the fields to the initial value (default is 0)
      */
     void clear();
 
@@ -437,7 +443,7 @@ struct PRM2 {
     bool write(OLEStreamWriter *stream, bool preservePos=false) const;
 
     /**
-     * Set all the fields to the inital value (default is 0)
+     * Set all the fields to the initial value (default is 0)
      */
     void clear();
 
@@ -494,7 +500,7 @@ struct PRM {
     bool write(OLEStreamWriter *stream, bool preservePos=false) const;
 
     /**
-     * Set all the fields to the inital value (default is 0)
+     * Set all the fields to the initial value (default is 0)
      */
     void clear();
 
@@ -531,7 +537,7 @@ bool operator!=(const PRM &lhs, const PRM &rhs);
 /**
  * Shading Descriptor (SHD)
  */
-struct SHD {
+struct WV2_EXPORT SHD {
     /**
      * Creates an empty SHD structure and sets the defaults
      */
@@ -564,12 +570,17 @@ struct SHD {
     void read90Ptr(const U8 *ptr);
 
     /**
+     * This method reads the SHDOperand struct from a pointer
+     */
+    void readSHDOperandPtr(const U8 *ptr);
+
+    /**
      * Same as reading :)
      */
     bool write(OLEStreamWriter *stream, bool preservePos=false) const;
 
     /**
-     * Set all the fields to the inital value (default is 0)
+     * Set all the fields to the initial value (default is 0)
      */
     void clear();
 
@@ -656,6 +667,16 @@ struct SHD {
      */
     U16 ipat;
 
+    /**
+     * return true if SHD content is interpreted as shdAuto.
+     */
+    bool isShdAuto() const;
+
+    /**
+     * return true if SHD content is interpreted as shdNil.
+     */
+    bool isShdNil() const;
+
 }; // SHD
 
 bool operator==(const SHD &lhs, const SHD &rhs);
@@ -698,7 +719,7 @@ struct PHE {
     bool write(OLEStreamWriter *stream, bool preservePos=false) const;
 
     /**
-     * Set all the fields to the inital value (default is 0)
+     * Set all the fields to the initial value (default is 0)
      */
     void clear();
 
@@ -769,7 +790,7 @@ bool operator!=(const PHE &lhs, const PHE &rhs);
 /**
  * Border Code (BRC)
  */
-struct BRC {
+struct WV2_EXPORT BRC {
     /**
      * Creates an empty BRC structure and sets the defaults
      */
@@ -807,7 +828,7 @@ struct BRC {
     bool write(OLEStreamWriter *stream, bool preservePos=false) const;
 
     /**
-     * Set all the fields to the inital value (default is 0)
+     * Set all the fields to the initial value (default is 0)
      */
     void clear();
 
@@ -826,9 +847,10 @@ struct BRC {
     static const unsigned int sizeOf97;
 
     // Data
-    
+
     /**
-     *  24-bit border color
+     * A COLORREF value that specifies the color of the corresponding border.
+     * The default color is cvAuto.
      */
     U32 cv;
 
@@ -870,8 +892,9 @@ struct BRC {
     U16 brcType:8;
 
     /**
-     * width of space to maintain between border and text within border. Must
-     * be 0 when BRC is a substructure of TC. Stored in points.
+     * Specifies the distance from the text to the border, in points.  For page
+     * borders, sprmSPgbProp can specify that this value shall specify the
+     * distance from the edge of the page to the border.
      */
     U16 dptSpace:5;
 
@@ -930,7 +953,7 @@ struct TLP {
     bool write(OLEStreamWriter *stream, bool preservePos=false) const;
 
     /**
-     * Set all the fields to the inital value (default is 0)
+     * Set all the fields to the initial value (default is 0)
      */
     void clear();
 
@@ -1086,7 +1109,7 @@ struct TC {
     bool write(OLEStreamWriter *stream, bool preservePos=false) const;
 
     /**
-     * Set all the fields to the inital value (default is 0)
+     * Set all the fields to the initial value (default is 0)
      */
     void clear();
 
@@ -1194,7 +1217,14 @@ struct TC {
      * specification of right border of table row.
      */
     BRC brcRight;
-
+    /**
+     * border line from top left to bottom right
+     */
+    BRC brcTL2BR;
+    /**
+     * border line from top right to bottom left
+     */
+    BRC brcTR2BL;
 }; // TC
 
 bool operator==(const TC &lhs, const TC &rhs);
@@ -1228,7 +1258,7 @@ struct TAP : public Shared {
     bool write(OLEStreamWriter *stream, bool preservePos=false) const;
 
     /**
-     * Set all the fields to the inital value (default is 0)
+     * Set all the fields to the initial value (default is 0)
      */
     void clear();
 
@@ -1263,20 +1293,32 @@ struct TAP : public Shared {
 
     // Data
     /**
-     * justification code. specifies how table row should be justified within
-     * its column.
+     * Specifies the physical justification of the table.  Valid values are:
      * 0 left justify
      * 1 center
      * 2 right justify
      */
-    S16 jc;
+    U16 jc;
+
+    /**
+     * Combined with dxaGapHalf, specified the location of the horizontal
+     * origin of the table relative to the logical left margin.  That is, the
+     * origin is the logical left margin, indented by this value minus the
+     * value of dxaGapHalf.
+     */
+    S16 dxaLeft;
 
     /**
      * measures half of the white space that will be maintained between text
      * in adjacent columns of a table row. A dxaGapHalf width of white space will
      * be maintained on both sides of a column boundary.
      */
-    S32 dxaGapHalf;
+    S16 dxaGapHalf;
+
+    /**
+     * The preferred leading indent of the table where the row resides.
+     */
+    S16 widthIndent;
 
     /**
      * when greater than 0. guarantees that the height of the table will be
@@ -1307,6 +1349,56 @@ struct TAP : public Shared {
      * table look specifier (see TLP definition)
      */
     TLP tlp;
+
+    /**
+     * Specifies whether this table is right-to-left.  By default table is
+     * left-to-right.
+     */
+    U16 fBiDi;
+
+    /**
+     * Vertical position code.  Specifies the location of an anchor point for
+     * an absolutely positioned table.
+     * 0 - relative to the top page margin
+     * 1 - relative to the top edge of the page
+     * 2 - relative to the paragraph bottom of the pragraph that precedes it.
+     * 3 - None. The table is not absolutely positioned.
+     */
+    U8 pcVert:2;
+
+    /**
+     * Horizontal position code.  Specifies the location of an anchor point for
+     * an absolutely positioned table.
+     * 0 - relative to the left edge of the current column
+     * 1 - relative to the left page margin
+     * 2 - relative to the left edge of the page
+     * 3 - None. The table is not absolutely positioned.
+     */
+    U8 pcHorz:2;
+
+    /**
+     * Specifies the horizontal position of the table relative to the table's
+     * horizontal anchor. The physical left origin of the table.  Values have
+     * the following meaning:
+     *   0 - table adjusted left within reference frame
+     *  -4 - table centered horizontally within reference frame
+     *  -8 - table adjusted right within reference frame
+     * -12 - table placed inside of reference frame
+     * -16 - table placed outside of reference frame
+     */
+    S16 dxaAbs;
+
+    /**
+     * Specifies downward vertical position of the table relative to the
+     * table's vertical anchor.  Values have the following meaning:
+     *   0 - inline (default value)
+     *  -4 - table is placed at top of reference frame
+     *  -8 - table is centered vertically within reference frame
+     * -12 - table is placed at bottom of reference frame
+     * -16 - table placed inside of reference frame
+     * -20 - table placed outside of reference frame
+     */
+    S16 dyaAbs;
 
     /**
      * reserved for future use
@@ -1361,8 +1453,9 @@ struct TAP : public Shared {
 
     /**
      * rgdxaCenter[0] is the left boundary of cell 0 measured relative to
-     * margin.. rgdxaCenter[tap.itcMac - 1] is left boundary of last cell. rgdxaCenter[tap.itcMac]
-     * is right boundary of last cell. (Changed the array to a vector)
+     * margin.. rgdxaCenter[tap.itcMac - 1] is left boundary of last
+     * cell. rgdxaCenter[tap.itcMac] is right boundary of last cell. (Changed
+     * the array to a vector)
      */
     std::vector<S16> rgdxaCenter;
 
@@ -1385,6 +1478,59 @@ struct TAP : public Shared {
      * array of border defaults for cells
      */
     BRC rgbrcTable[6];
+
+    /**
+     * An XAS_nonNeg that specifies the minimum horizontal distance between the
+     * physical left edge of the table and the physical right edge of the text
+     * that wraps around the table.  By default, the minimum horizontal
+     * distance between a table and wrapping text is 0 twips.
+     */
+    U16 dxaFromText;
+
+    /**
+     * An YAS_nonNeg that specifies the minimum vertical distance between the
+     * top edge of the table and the bottom edge of the text that wraps around
+     * the table.  By default, the minimum vertical distance between a table
+     * and wrapping text is 0 twips.
+     */
+    U16 dyaFromText;
+
+    /**
+     * An XAS_nonNeg that specifies the minimum horizontal distance between the
+     * physical right edge of the table and the physical left edge of the text
+     * that wraps around the table.  By default, the minimum horizontal
+     * distance between a table and wrapping text is 0 twips.
+     */
+    U16 dxaFromTextRight;
+
+    /**
+     * An YAS_nonNeg that specifies the minimum vertical distance between the
+     * bottom edge of the table and the top edge of the text that wraps around
+     * the table.  By default, the minimum vertical distance between a table
+     * and wrapping text is 0 twips.
+     */
+    U16 dyaFromTextBottom;
+
+    /**
+     * A helper variable set to one if any of dxaFromText, dyaFromText,
+     * dxaFromTextRight, dyaFromTextBottom SPRMs was processed.  If set to one,
+     * around text wrapping is active.
+     */
+    U8 textWrap;
+
+    /**
+     * Specifies left and right cell margins.  Cell margin is the distance
+     * between the border of a cell and the nearest pixel in a character or
+     * digit of data in the cell.
+     */
+    U16 padHorz;
+
+    /**
+     * Specifies top and bottom cell margins.  Cell margin is the distance
+     * between the border of a cell and the nearest pixel in a character or
+     * digit of data in the cell.
+     */
+    U16 padVert;
 
 }; // TAP
 
@@ -1424,7 +1570,7 @@ bool operator!=(const TAP &lhs, const TAP &rhs);
 //    bool write(OLEStreamWriter *stream, bool preservePos=false) const;
 
 //    /**
-//     * Set all the fields to the inital value (default is 0)
+//     * Set all the fields to the initial value (default is 0)
 //     */
 //    void clear();
 
@@ -1496,7 +1642,7 @@ struct ANLD {
     bool write(OLEStreamWriter *stream, bool preservePos=false) const;
 
     /**
-     * Set all the fields to the inital value (default is 0)
+     * Set all the fields to the initial value (default is 0)
      */
     void clear();
 
@@ -1730,7 +1876,7 @@ struct ANLV {
     bool write(OLEStreamWriter *stream, bool preservePos=false) const;
 
     /**
-     * Set all the fields to the inital value (default is 0)
+     * Set all the fields to the initial value (default is 0)
      */
     void clear();
 
@@ -1929,7 +2075,7 @@ struct ASUMY {
     bool write(OLEStreamWriter *stream, bool preservePos=false) const;
 
     /**
-     * Set all the fields to the inital value (default is 0)
+     * Set all the fields to the initial value (default is 0)
      */
     void clear();
 
@@ -1972,7 +2118,7 @@ struct ASUMYI {
     bool write(OLEStreamWriter *stream, bool preservePos=false) const;
 
     /**
-     * Set all the fields to the inital value (default is 0)
+     * Set all the fields to the initial value (default is 0)
      */
     void clear();
 
@@ -2055,7 +2201,7 @@ struct ATRD {
     bool write(OLEStreamWriter *stream, bool preservePos=false) const;
 
     /**
-     * Set all the fields to the inital value (default is 0)
+     * Set all the fields to the initial value (default is 0)
      */
     void clear();
 
@@ -2124,7 +2270,7 @@ struct BKD {
     bool write(OLEStreamWriter *stream, bool preservePos=false) const;
 
     /**
-     * Set all the fields to the inital value (default is 0)
+     * Set all the fields to the initial value (default is 0)
      */
     void clear();
 
@@ -2208,9 +2354,12 @@ struct BKF {
     bool write(OLEStreamWriter *stream, bool preservePos=false) const;
 
     /**
-     * Set all the fields to the inital value (default is 0)
+     * Set all the fields to the initial value (default is 0)
      */
     void clear();
+
+    // Size of the structure
+    static const unsigned int sizeOf;
 
     // Data
     /**
@@ -2276,9 +2425,12 @@ struct BKL {
     bool write(OLEStreamWriter *stream, bool preservePos=false) const;
 
     /**
-     * Set all the fields to the inital value (default is 0)
+     * Set all the fields to the initial value (default is 0)
      */
     void clear();
+
+    // Size of the structure
+    static const unsigned int sizeOf;
 
     // Data
     /**
@@ -2322,7 +2474,7 @@ struct BRC10 {
     bool write(OLEStreamWriter *stream, bool preservePos=false) const;
 
     /**
-     * Set all the fields to the inital value (default is 0)
+     * Set all the fields to the initial value (default is 0)
      */
     void clear();
 
@@ -2392,7 +2544,7 @@ struct BTE {
     bool write(OLEStreamWriter *stream, bool preservePos=false) const;
 
     /**
-     * Set all the fields to the inital value (default is 0)
+     * Set all the fields to the initial value (default is 0)
      */
     void clear();
 
@@ -2438,7 +2590,7 @@ struct CHP : public Shared {
     bool write(OLEStreamWriter *stream, bool preservePos=false) const;
 
     /**
-     * Set all the fields to the inital value (default is 0)
+     * Set all the fields to the initial value (default is 0)
      */
     void clear();
 
@@ -2676,9 +2828,9 @@ struct CHP : public Shared {
      * 15 DkGray
      * 16 LtGray
      */
-    
+
     U8 icoObsolete:5;
-    
+
     /**
      * reserved
      */
@@ -2701,9 +2853,16 @@ struct CHP : public Shared {
     S16 hpsPos;
 
     /**
-     * foreground color, color of the text
+     * A COLORREF value that specifies the color of the text.  The default text
+     * color is cvAuto.
      */
     U32 cv;
+
+    /**
+     * A COLORREF value that specifies the color of the text underline.  The
+     * default underline color is cvAuto.
+     */
+    U32 cvUl;
 
     /**
      * LID language identification code (no longer stored here, see rglid
@@ -2834,11 +2993,11 @@ struct CHP : public Shared {
     S16 unused52;
 
     /**
-     * index to character style descriptor in the stylesheet that tags this
-     * run of text When istd is istdNormalChar (10 decimal), characters in run
-     * are not affected by a character style. If chp.istd contains any other value,
-     * chpx of the specified character style are applied to CHP for this run before
-     * any other exceptional properties are applied.
+     * index to character style descriptor in the stylesheet that tags this run
+     * of text.  When istd is istdNormalChar (10 decimal), characters in run
+     * are not affected by a character style.  If chp.istd contains any other
+     * value, chpx of the specified character style are applied to CHP for this
+     * run before any other exceptional properties are applied.
      */
     U16 istd;
 
@@ -3017,6 +3176,36 @@ struct CHP : public Shared {
      */
     BRC brc;
 
+    /**
+     * specifies if the text is vertical or horizontal
+     */
+    U16 fTNY:1;
+
+    /**
+     * specifies if the text is scaled to fit the line
+     */
+    U16 fTNYCompress:1;
+
+
+    /**
+     * A CP value in the Bullet Pictures document that specifies which picture
+     * is used as a bullet character when rendering the bullet.  The CP value
+     * MUST be greater than or equal to zero.  The Bullet Pictures document is
+     * stored within the main document and marked by a hidden bookmark called
+     * "_PictureBullets."
+     */
+    U32 picBulletCP;
+
+    /**
+     * PbiGrfOperand - specifies whether a picture is used as a bullet
+     * character when rendering the bullet.  This value also specifies whether
+     * the size of the picture changes automatically to match the size of the
+     * text that follows the bullet.
+     */
+    U8 fPicBullet:1;
+    U8 fNoAutoSize:1;
+    U8 pbi_unused:6;
+
 }; // CHP
 
 bool operator==(const CHP &lhs, const CHP &rhs);
@@ -3062,7 +3251,7 @@ bool operator!=(const CHP &lhs, const CHP &rhs);
 //    bool write(OLEStreamWriter *stream, bool preservePos=false) const;
 
 //    /**
-//     * Set all the fields to the inital value (default is 0)
+//     * Set all the fields to the initial value (default is 0)
 //     */
 //    void clear();
 
@@ -3127,7 +3316,7 @@ bool operator!=(const CHP &lhs, const CHP &rhs);
 //    bool write(OLEStreamWriter *stream, bool preservePos=false) const;
 
 //    /**
-//     * Set all the fields to the inital value (default is 0)
+//     * Set all the fields to the initial value (default is 0)
 //     */
 //    void clear();
 
@@ -3208,7 +3397,7 @@ struct DCS {
     bool write(OLEStreamWriter *stream, bool preservePos=false) const;
 
     /**
-     * Set all the fields to the inital value (default is 0)
+     * Set all the fields to the initial value (default is 0)
      */
     void clear();
 
@@ -3276,7 +3465,7 @@ struct DOGRID {
     bool write(OLEStreamWriter *stream, bool preservePos=false) const;
 
     /**
-     * Set all the fields to the inital value (default is 0)
+     * Set all the fields to the initial value (default is 0)
      */
     void clear();
 
@@ -3331,7 +3520,9 @@ bool operator!=(const DOGRID &lhs, const DOGRID &rhs);
 
 
 /**
- * Document Properties (DOP)
+ * Document Properties (DOP) - The Dop97 structure contains document and
+ * compatibility settings.  These settings influence the appearance and
+ * behavior of the current document and store the document-level state.
  */
 struct DOP {
     /**
@@ -3357,11 +3548,15 @@ struct DOP {
     bool write(OLEStreamWriter *stream, bool preservePos=false) const;
 
     /**
-     * Set all the fields to the inital value (default is 0)
+     * Set all the fields to the initial value (default is 0)
      */
     void clear();
 
     // Data
+
+    // --------------------
+    // DopBase - BEGIN
+    // --------------------
     /**
      * 1 when facing pages should be printed.
      * Default 0.
@@ -3386,11 +3581,18 @@ struct DOP {
     U16 grfSuppression:2;
 
     /**
-     * footnote position code
-     * 0 print as endnotes
-     * 1 print at bottom of page
-     * 2 print immediately beneath text
-     * Default 1.
+     * Specifies where footnotes are placed on the page when they are
+     * referenced by text in the current document for documents that have an
+     * nFib <= 0x00D9.  This MUST be one of the following values.
+     *
+     * 0 Specifies that all footnotes are placed at the end of the section in
+     * which they are referenced.
+     *
+     * 1 Specifies that footnotes are displayed at the bottom margin of the
+     * page on which the note reference mark appears.
+     *
+     * 2 Specifies that footnotes are displayed immediately following the last
+     * line of text on the page on which the note reference mark appears.
      */
     U16 fpc:2;
 
@@ -3405,16 +3607,23 @@ struct DOP {
     U16 grpfIhdt:8;
 
     /**
-     * restart index for footnotes
-     * 0 don't restart note numbering
-     * 1 restart for each section
-     * 2 restart for each page
-     * Default 0.
+     * Specifies when all automatic numbering for the footnote reference marks
+     * is restarted for documents that have an nFib <= 0x00D9.  For those
+     * documents that rely on rncFtn, when restarted, the next automatically
+     * numbered footnote in the document restarts to the specified nFtn value.
+     * This MUST be one of the following values.
+     *
+     * 0 Numbering continues from the previous section in the document.
+     * 1 Reset to the starting value for each unique section in the document.
+     * 2 Reset to the starting value for each unique page in the document.
      */
     U16 rncFtn:2;
 
     /**
-     * initial footnote number for document. Default 1.
+     * For those documents that have an nFib <= 0x00D9, this element specifies
+     * the starting number for the first automatically numbered footnotes in
+     * the document, and the first automatically numbered footnotes after each
+     * restart point that is specified by the rncFtn element.
      */
     U16 nFtn:14;
 
@@ -3690,22 +3899,33 @@ struct DOP {
     S32 cParas;
 
     /**
-     * restart endnote number code
-     * 0 don't restart endnote numbering
-     * 1 restart for each section
-     * 2 restart for each page
+     * Specifies when automatic numbering for the endnote reference marks is
+     * reset to the beginning number for documents that have an nFib <= 0x00D9.
+     * For those documents that rely on rncEdn, when restarted, the next
+     * automatically numbered endnote in the document is reset to the specified
+     * nEdn value.  This value MUST be one of the following.
+     *
+     * 0 Numbering of endnotes continues from the previous section.
+     * 1 Reset to the starting value for each unique section in the document.
+     * 2 Reset to the starting value for each unique page in the document.
      */
     U16 rncEdn:2;
 
     /**
-     * beginning endnote number
+     * For those documents that have an nFib <= 0x00D9, this element specifies
+     * the starting number for the first automatically numbered endnote in the
+     * document, and the first automatically numbered endnote after each
+     * restart point that is specified by the rncEdn element.
      */
     U16 nEdn:14;
 
     /**
-     * endnote position code
-     * 0 display endnotes at end of section
-     * 3 display endnotes at end of document
+     * Specifies where endnotes are placed on the page when they are referenced
+     * by text in the current document.  This value MUST be one of the
+     * following.
+     *
+     * 0 Endnotes placed at the end of the section in which they are referenced.
+     * 3 All endnotes are placed at the end of the current document.
      */
     U16 epc:2;
 
@@ -3717,6 +3937,7 @@ struct DOP {
      * 3 Upper case Letter
      * 4 Lower case Letter
      * [This field is obsoleted by nfcFtnRef2 at 0x1ec (Werner)]
+     * [unused14 in [MS-DOC] — v20101219 (uzak)]
      */
     U16 nfcFtnRef:4;
 
@@ -3728,6 +3949,7 @@ struct DOP {
      * 3 Upper case Letter
      * 4 Lower case Letter
      * [This field is obsoleted by nfcEdnRef2 at 0x1ee (Werner)]
+     * [unused15 in [MS-DOC] — v20101219 (uzak)]
      */
     U16 nfcEdnRef:4;
 
@@ -3828,6 +4050,13 @@ struct DOP {
      */
     U16 iGutterPos:1;
 
+    // --------------------
+    //  DopBase - END
+    // --------------------
+
+    // --------------------
+    //  Copts80 - BEGIN
+    // --------------------
     /**
      * (see above)
      */
@@ -3927,6 +4156,10 @@ struct DOP {
      * (reserved)
      */
     U32 unused84_22:10;
+
+    // --------------------
+    //  Copts80 - END
+    // --------------------
 
     /**
      * Autoformat Document Type: 0 for normal. 1 for letter, and 2 for email.
@@ -4088,7 +4321,9 @@ struct DOP {
     U32 unused488;
 
     /**
-     * number format code for auto footnote references
+     * For those documents that have an nFib <= 0x00D9, specifies the numbering
+     * format code to use for footnotes in the document.
+     *
      * 0 Arabic
      * 1 Upper case Roman
      * 2 Lower case Roman
@@ -4098,9 +4333,11 @@ struct DOP {
     S16 nfcFtnRef2;
 
     /**
-     * number format code for auto endnote references
+     * For those documents that have an nFib <= 0x00D9, specifies the numbering
+     * format code to use for endnotes in the document.
+     *
      * 0 Arabic
-     * <div CLASS="tt">1 Upper case Roman</div>
+     * 1 Upper case Roman
      * 2 Lower case Roman
      * 3 Upper case Letter
      * 4 Lower case Letter
@@ -4162,7 +4399,7 @@ bool operator!=(const DOP &lhs, const DOP &rhs);
 //    bool write(OLEStreamWriter *stream, bool preservePos=false) const;
 
 //    /**
-//     * Set all the fields to the inital value (default is 0)
+//     * Set all the fields to the initial value (default is 0)
 //     */
 //    void clear();
 
@@ -4266,11 +4503,26 @@ struct FIB {
     bool write(OLEStreamWriter *stream, bool preservePos=false) const;
 
     /**
-     * Set all the fields to the inital value (default is 0)
+     * Validate FIB.  Don't take warnings too seriously.  It seems that the
+     * information depends on the file content saved by a specific MS Office
+     * version.  Don't expect to recognize the MS Office version which saved
+     * the file based on the value of the nFib or the nFibNew attribute.  The
+     * nFib seems to be used for backward compatibility.  The nFibNew seems to
+     * be used by MS Office > 2k, sometimes.
+     */
+    bool valid() const;
+
+    /**
+     * Set all the fields to the initial value (default is 0)
      */
     void clear();
 
     // Data
+
+    // --------------------
+    // FibBase - BEGIN
+    // --------------------
+
     /**
      * (fibh) FIBH Beginning of the FIB header magic number
      */
@@ -4428,6 +4680,10 @@ struct FIB {
      * file offset of last character of text in document text stream + 1
      */
     U32 fcMac;
+
+    // --------------------
+    // FibBase - END
+    // --------------------
 
     /**
      * Count of fields in the array of "shorts"
@@ -5509,6 +5765,20 @@ struct FIB {
 
     U32 lcbSttbfUssr;
 
+    /**
+     * An unsigned integer that specifies the count of 16-bit values
+     * corresponding to fibRgCswNew that follow.  This MUST be one of the
+     * following values, depending on the value of nFib.
+     *
+     * [nFib] [value]
+     * 0x00C1 0
+     * 0x00D9 0x0002
+     * 0x0101 0x0002
+     * 0x010C 0x0002
+     * 0x0112 0x0005
+     */
+    U16 cswNew;
+
 }; // FIB
 
 bool operator==(const FIB &lhs, const FIB &rhs);
@@ -5542,7 +5812,7 @@ struct FIBFCLCB {
     bool write(OLEStreamWriter *stream, bool preservePos=false) const;
 
     /**
-     * Set all the fields to the inital value (default is 0)
+     * Set all the fields to the initial value (default is 0)
      */
     void clear();
 
@@ -5595,7 +5865,7 @@ bool operator!=(const FIBFCLCB &lhs, const FIBFCLCB &rhs);
 //    bool write(OLEStreamWriter *stream, bool preservePos=false) const;
 
 //    /**
-//     * Set all the fields to the inital value (default is 0)
+//     * Set all the fields to the initial value (default is 0)
 //     */
 //    void clear();
 
@@ -5665,7 +5935,7 @@ struct FRD {
     bool write(OLEStreamWriter *stream, bool preservePos=false) const;
 
     /**
-     * Set all the fields to the inital value (default is 0)
+     * Set all the fields to the initial value (default is 0)
      */
     void clear();
 
@@ -5712,7 +5982,7 @@ struct FSPA {
     bool write(OLEStreamWriter *stream, bool preservePos=false) const;
 
     /**
-     * Set all the fields to the inital value (default is 0)
+     * Set all the fields to the initial value (default is 0)
      */
     void clear();
 
@@ -5852,7 +6122,7 @@ struct FTXBXS {
     bool write(OLEStreamWriter *stream, bool preservePos=false) const;
 
     /**
-     * Set all the fields to the inital value (default is 0)
+     * Set all the fields to the initial value (default is 0)
      */
     void clear();
 
@@ -5922,7 +6192,7 @@ struct LFO {
     bool write(OLEStreamWriter *stream, bool preservePos=false) const;
 
     /**
-     * Set all the fields to the inital value (default is 0)
+     * Set all the fields to the initial value (default is 0)
      */
     void clear();
 
@@ -5988,7 +6258,7 @@ struct LFOLVL {
     bool write(OLEStreamWriter *stream, bool preservePos=false) const;
 
     /**
-     * Set all the fields to the inital value (default is 0)
+     * Set all the fields to the initial value (default is 0)
      */
     void clear();
 
@@ -6010,7 +6280,7 @@ struct LFOLVL {
     U8 fStartAt:1;
 
     /**
-     * true if the formatting is overriden (in which case the LFOLVL should
+     * true if the formatting is overridden (in which case the LFOLVL should
      * contain a pointer to a LVL)
      */
     U8 fFormatting:1;
@@ -6058,7 +6328,7 @@ struct LSPD {
     bool write(OLEStreamWriter *stream, bool preservePos=false) const;
 
     /**
-     * Set all the fields to the inital value (default is 0)
+     * Set all the fields to the initial value (default is 0)
      */
     void clear();
 
@@ -6117,7 +6387,7 @@ struct LSTF {
     bool write(OLEStreamWriter *stream, bool preservePos=false) const;
 
     /**
-     * Set all the fields to the inital value (default is 0)
+     * Set all the fields to the initial value (default is 0)
      */
     void clear();
 
@@ -6196,7 +6466,7 @@ struct LVLF {
     bool write(OLEStreamWriter *stream, bool preservePos=false) const;
 
     /**
-     * Set all the fields to the inital value (default is 0)
+     * Set all the fields to the initial value (default is 0)
      */
     void clear();
 
@@ -6240,7 +6510,7 @@ struct LVLF {
 
     /**
      * true if this level was from a converted Word 6 document. If it is true,
-     * all of the Word 6 compability options become valid; otherwise they are
+     * all of the Word 6 compatibility options become valid; otherwise they are
      * ignored.
      */
     U8 fWord6:1;
@@ -6324,7 +6594,7 @@ struct METAFILEPICT {
     bool write(OLEStreamWriter *stream, bool preservePos=false) const;
 
     /**
-     * Set all the fields to the inital value (default is 0)
+     * Set all the fields to the initial value (default is 0)
      */
     void clear();
 
@@ -6340,7 +6610,8 @@ struct METAFILEPICT {
 
     // Data
     /**
-     * Specifies the mapping mode in which the picture is drawn.
+     * Specifies the format of the picture data.
+     * 0x0064 - shape object, 0x0066 - shape file
      */
     S16 mm;
 
@@ -6418,7 +6689,7 @@ struct NUMRM {
     bool write(OLEStreamWriter *stream, bool preservePos=false) const;
 
     /**
-     * Set all the fields to the inital value (default is 0)
+     * Set all the fields to the initial value (default is 0)
      */
     void clear();
 
@@ -6509,7 +6780,7 @@ struct OBJHEADER {
     bool write(OLEStreamWriter *stream, bool preservePos=false) const;
 
     /**
-     * Set all the fields to the inital value (default is 0)
+     * Set all the fields to the initial value (default is 0)
      */
     void clear();
 
@@ -6571,7 +6842,7 @@ struct OLST {
     bool write(OLEStreamWriter *stream, bool preservePos=false) const;
 
     /**
-     * Set all the fields to the inital value (default is 0)
+     * Set all the fields to the initial value (default is 0)
      */
     void clear();
 
@@ -6653,7 +6924,7 @@ struct PAP : public Shared {
     bool write(OLEStreamWriter *stream, bool preservePos=false) const;
 
     /**
-     * Set all the fields to the inital value (default is 0)
+     * Set all the fields to the initial value (default is 0)
      */
     void clear();
 
@@ -6727,21 +6998,22 @@ struct PAP : public Shared {
     U8 fUnused:2;
 
     /**
-     * vertical position code. Specifies coordinate frame to use when paragraphs
-     * are absolutely positioned.
-     * 0 vertical position coordinates are relative to margin
-     * 1 coordinates are relative to page
-     * 2 coordinates are relative to text. This means: relative to where the
-     * next non-APO text would have been placed if this APO did not exist.
+     * Vertical position code.  Specifies the location of an anchor point for
+     * an absolutely positioned table or frame.
+     * 0 - relative to the top page margin
+     * 1 - relative to the top edge of the page
+     * 2 - relative to the paragraph bottom of the pragraph that precedes it.
+     * 3 - None. The table or frame is not absolutely positioned.
      */
     U8 pcVert:2;
 
     /**
-     * horizontal position code. Specifies coordinate frame to use when paragraphs
-     * are absolutely positioned.
-     * 0 horiz. position coordinates are relative to column.
-     * 1 coordinates are relative to margin
-     * 2 coordinates are relative to page
+     * Horizontal position code.  Specifies the location of an anchor point for
+     * an absolutely positioned table or frame.
+     * 0 - relative to the left edge of the current column
+     * 1 - relative to the left page margin
+     * 2 - relative to the left edge of the page
+     * 3 - None. The table or frame is not absolutely positioned.
      */
     U8 pcHorz:2;
 
@@ -6773,21 +7045,48 @@ struct PAP : public Shared {
     U8 unused9;
 
     /**
-     * when non-zero, list level for this paragraph (0-based index! Look at the sprmPIlvl docu (Werner))
+     * An unsigned 8-bit integer that specifies the list level of the
+     * paragraph.  This value MUST be ignored if this paragraph is not in a
+     * list (see sprmPIlfo).  This value MUST be one of the following:
+     *
+     * <0x0, 0x8> - The value specifies the zero-based level of the list that
+     * contains this paragraph.  For example, a value of 0x0 means that the
+     * paragraph is in the first level of the list.
+     *
+     * 0xC - The list skips this paragraph and does not include it in its
+     * numbering.
+     *
+     * By default, a paragraph is in the first level of the list.
      */
     U8 ilvl;
+
+    /**
+     * A 16-bit signed integer value that is used to determine which list
+     * contains the paragraph.  This value MUST be one of the following:
+     *
+     * 0x0000 - This paragraph is not in a list, and any list formatting on the
+     * paragraph is removed.
+     *
+     * <0x0001, 0x07FE> - The value is a 1-based index into PlfLfo.rgLfo.  The
+     * LFO at this index defines the list that this paragraph is in.
+     *
+     * 0xF801 - This paragraph is not in a list.
+     *
+     * <0xF802, 0xFFFF> - The value is the negation of a 1-based index into
+     * PlfLfo.rgLfo.  The LFO at this index defines the list that this
+     * paragraph is in.  The logical left indentation (see sprmPDxaLeft) and
+     * the logical left first line indentation (see sprmPDxaLeft1) of the
+     * paragraph MUST be preserved despite any list formatting.
+     *
+     * By default, a paragraph is not in a list.
+     */
+    S16 ilfo;
 
     /**
      * no line numbering for this paragraph. (makes this an exception to the
      * section property of line numbering)
      */
     U8 fNoLnn;
-
-    /**
-     * when non-zero, (1-based) index into the pllfo identifying the list
-     * to which the paragraph belongs
-     */
-    S16 ilfo;
 
     /**
      * no longer used
@@ -6819,6 +7118,22 @@ struct PAP : public Shared {
      * placed at the beginning of a page
      */
     U8 fWidowControl;
+
+    /**
+     * A Bool8 value that specifies whether the space displayed before this
+     * paragraph uses auto spacing.  A value of 1 specifies that the
+     * sprmPDyaBefore value MUST be ignored when the application supports auto
+     * spacing.  By default, auto spacing is disabled for paragraphs.
+     */
+    U8 dyaBeforeAuto;
+
+    /**
+     * A Bool8 value that specifies whether the space displayed after this
+     * paragraph uses auto spacing.  A value of 1 specifies that sprmPDyaAfter
+     * MUST be ignored if the application supports auto spacing.  By default,
+     * auto spacing is disabled for paragraphs.
+     */
+    U8 dyaAfterAuto;
 
     /**
      * indent from right margin (signed).
@@ -6923,15 +7238,61 @@ struct PAP : public Shared {
     U16 unused70;
 
     /**
-     * when 1, paragraph is contained in a table row
+     * A Bool8 value that specifies whether this paragraph is in a table.  The
+     * value MUST be 1 any time the table depth is greater than zero.  By
+     * default, paragraphs are not in tables.
      */
     S8 fInTable;
 
     /**
-     * when 1, paragraph consists only of the row mark special character and
-     * marks the end of a table row.
+     * A Bool8 that, when set to 1, specifies that the cell mark it is applied
+     * to is a Table Terminating Paragraph (TTP) mark.  The TTP mark MUST be
+     * immediately preceded by a cell mark.  By default, a cell mark is not a
+     * Table Terminating Paragraph Mark.
      */
     S8 fTtp;
+
+    /**
+     * An integer value that specifies the table depth of this paragraph.  This
+     * value, when present, MUST be a non-negative number.  By default,
+     * paragraphs are not in tables.
+     */
+    S32 itap;
+
+    /**
+     * A signed integer that specifies an addition or subtraction to the
+     * existing table depth of this paragraph.  It provides an alternate way of
+     * specifying table depth to sprmPItap or a way to increment or decrement
+     * any value that was already set by sprmPItap or sprmPDtap.  By default,
+     * paragraphs are not in tables.
+     */
+    S32 dtap;
+
+    /**
+     * A Bool8 value that specifies whether this paragraph is the final
+     * paragraph in a nested table cell.
+     *
+     * When true, the nesting level of this paragraph MUST be greater than 1,
+     * indicating that this paragraph is in a table which is nested within
+     * another table.
+     *
+     * When true, this is the last paragraph of a nested table cell and its
+     * paragraph mark is treated as if it were an end of cell mark. By default,
+     * paragraphs are not the last paragraph of a nested table cell.
+     */
+    U8 fInnerTableCell;
+
+    /**
+     * A Bool8 value that specifies whether this paragraph is the final
+     * paragraph in a nested table row.  When 1, the table depth of this
+     * paragraph MUST be greater than 1, indicating that this paragraph is in a
+     * table that is nested within another table.
+     *
+     * When 1, this is the last paragraph of a nested table row and its
+     * paragraph mark is treated as if it were a TTP mark.  By default,
+     * paragraphs are not the last paragraph of a nested table row.
+     */
+    U8 fInnerTtp;
 
     /**
      * Wrap Code for absolute objects
@@ -7042,10 +7403,32 @@ struct PAP : public Shared {
      */
     DCS dcs;
 
+    /**
+     * An unsigned 8-bit integer value that specifies the outline level of the
+     * paragraph.  This value MUST be one of the following.
+     *
+     * 0x0 - 0x8
+     * The value is the zero-based outline level that this paragraph is in.
+     * 0x9
+     * The paragraph at any outline level; instead, the paragraph is body text.
+     *
+     * This MUST be ignored if the paragraph has an istd that is greater than
+     * or equal to 0x1 and less than or equal to 0x9.  By default, paragraphs
+     * are body text, and are therefore not in any outline level.
+     */
     S8 lvl;
 
+    /**
+     * A Bool8 value that specifies whether the paragraph uses right-to- left
+     * layout.  By default, a paragraph does not use right-to-left layout.
+     */
     S8 fBiDi;
 
+    /**
+     * A Bool8 value that specifies whether a numbered list was applied to this
+     * paragraph after the previous revision.  By default, paragraphs do not
+     * have numbered lists applied.
+     */
     S8 fNumRMIns;
 
     /**
@@ -7127,7 +7510,7 @@ bool operator!=(const PAP &lhs, const PAP &rhs);
 //    bool write(OLEStreamWriter *stream, bool preservePos=false) const;
 
 //    /**
-//     * Set all the fields to the inital value (default is 0)
+//     * Set all the fields to the initial value (default is 0)
 //     */
 //    void clear();
 
@@ -7216,7 +7599,7 @@ bool operator!=(const PAP &lhs, const PAP &rhs);
 //    bool write(OLEStreamWriter *stream, bool preservePos=false) const;
 
 //    /**
-//     * Set all the fields to the inital value (default is 0)
+//     * Set all the fields to the initial value (default is 0)
 //     */
 //    void clear();
 
@@ -7302,7 +7685,7 @@ struct PCD {
     bool write(OLEStreamWriter *stream, bool preservePos=false) const;
 
     /**
-     * Set all the fields to the inital value (default is 0)
+     * Set all the fields to the initial value (default is 0)
      */
     void clear();
 
@@ -7333,10 +7716,9 @@ struct PCD {
     U16 fn:8;
 
     /**
-     * file offset of beginning of piece. The size of the <b>ith</b> piece
-     * can be determined by subtracting rgcp[<b>i</b>] of the containing
-     * <b>plcfpcd</b>
-     * from its rgcp[<b>i+1</b>].
+     * file offset of beginning of piece. The size of the <b>ith</b> piece can
+     * be determined by subtracting rgcp[<b>i</b>] of the containing
+     * <b>plcfpcd</b> from its rgcp[<b>i+1</b>].
      */
     U32 fc;
 
@@ -7379,7 +7761,7 @@ struct PGD {
     bool write(OLEStreamWriter *stream, bool preservePos=false) const;
 
     /**
-     * Set all the fields to the inital value (default is 0)
+     * Set all the fields to the initial value (default is 0)
      */
     void clear();
 
@@ -7496,7 +7878,7 @@ struct PHE2 {
     bool write(OLEStreamWriter *stream, bool preservePos=false) const;
 
     /**
-     * Set all the fields to the inital value (default is 0)
+     * Set all the fields to the initial value (default is 0)
      */
     void clear();
 
@@ -7556,7 +7938,7 @@ struct PICF : public Shared {
     bool write(OLEStreamWriter *stream, bool preservePos=false) const;
 
     /**
-     * Set all the fields to the inital value (default is 0)
+     * Set all the fields to the initial value (default is 0)
      */
     void clear();
 
@@ -7591,16 +7973,17 @@ struct PICF : public Shared {
 
     // Data
     /**
-     * number of bytes in the PIC structure plus size of following picture
-     * data which may be a Window's metafile, a bitmap, or the filename of a TIFF
-     * file. In the case of a Macintosh PICT picture, this includes the size of
-     * the PIC, the standard "x" metafile, and the Macintosh PICT data. See Appendix
-     * B for more information.
+     * Number of bytes in the PICF structure plus size of following picture
+     * data which may be a Window's metafile, a bitmap, or the filename of a
+     * TIFF file.  In the case of a Macintosh PICT picture, this includes the
+     * size of the PIC, the standard "x" metafile, and the Macintosh PICT
+     * data. See Appendix B for more information.
      */
     U32 lcb;
 
     /**
-     * number of bytes in the PIC (to allow for future expansion).
+     * An unsigned integer that specifies the size, in bytes, of this PICF
+     * structure. This value MUST be 0x44.
      */
     U16 cbHeader;
 
@@ -7619,19 +8002,30 @@ struct PICF : public Shared {
      * Rect for window origin and extents when metafile is stored -- ignored
      * if 0 (8 bytes).
      */
+
+    /**
+     * innerHeader (14 bytes): A PICF_Shape structure that specifies additional
+     * header information.  According to [MS-DOC] — v20101219
+     */
     U8 bm_rcWinMF[14];
 
     /**
-     * horizontal measurement in twips of the rectangle the picture should
-     * be imaged within. when scaling bitmaps, dxaGoal and dyaGoal may be ignored
-     * if the operation would cause the bitmap to shrink or grow by a non -power-of-two
-     * factor
+     * [ BEGIN ] picmid (38 bytes): A PICMID structure that specifies the size
+     * and border information of the picture.  According to [MS-DOC] —
+     * v20101219
+     */
+
+    /**
+     * A signed integer that specifies the initial width of the picture, in
+     * twips, before cropping or scaling occurs. This value MUST be greater
+     * than zero.
      */
     S16 dxaGoal;
 
     /**
-     * vertical measurement in twips of the rectangle the picture should be
-     * imaged within.
+     * A signed integer that specifies the initial height of the picture, in
+     * twips, before cropping or scaling occurs. This value MUST be greater
+     * than zero.
      */
     S16 dyaGoal;
 
@@ -7646,25 +8040,22 @@ struct PICF : public Shared {
     U16 my;
 
     /**
-     * the amount the picture has been cropped on the left in twips. for all
-     * of the Crop values, a positive measurement means the specified border has
-     * been moved inward from its original setting and a negative measurement
-     * means the border has been moved outward from its original setting.
+     * dxaReserved1 - This value MUST be zero and MUST be ignored.
      */
     S16 dxaCropLeft;
 
     /**
-     * the amount the picture has been cropped on the top in twips.
+     * dyaReserved1 - This value MUST be zero and MUST be ignored.
      */
     S16 dyaCropTop;
 
     /**
-     * the amount the picture has been cropped on the right in twips.
+     * dxaReserved2 - This value MUST be zero and MUST be ignored.
      */
     S16 dxaCropRight;
 
     /**
-     * the amount the picture has been cropped on the bottom in twips.
+     * dyaReserved2 - This value MUST be zero and MUST be ignored.
      */
     S16 dyaCropBottom;
 
@@ -7727,17 +8118,20 @@ struct PICF : public Shared {
     BRC brcRight;
 
     /**
-     * horizontal offset of hand annotation origin
+     * This value MUST be zero and MUST be ignored.
      */
     S16 dxaOrigin;
 
     /**
-     * vertical offset of hand annotation origin
+     * This value MUST be zero and MUST be ignored.
      */
     S16 dyaOrigin;
 
     /**
-     * unused
+     * [ END ] picmid
+     */
+    /**
+     * This value MUST be 0 and MUST be ignored.
      */
     S16 cProps;
 
@@ -7786,7 +8180,7 @@ bool operator!=(const PICF &lhs, const PICF &rhs);
 //    bool write(OLEStreamWriter *stream, bool preservePos=false) const;
 
 //    /**
-//     * Set all the fields to the inital value (default is 0)
+//     * Set all the fields to the initial value (default is 0)
 //     */
 //    void clear();
 
@@ -7840,7 +8234,7 @@ struct RR {
     bool write(OLEStreamWriter *stream, bool preservePos=false) const;
 
     /**
-     * Set all the fields to the inital value (default is 0)
+     * Set all the fields to the initial value (default is 0)
      */
     void clear();
 
@@ -7888,7 +8282,7 @@ struct RS {
     bool write(OLEStreamWriter *stream, bool preservePos=false) const;
 
     /**
-     * Set all the fields to the inital value (default is 0)
+     * Set all the fields to the initial value (default is 0)
      */
     void clear();
 
@@ -7975,7 +8369,7 @@ struct SED {
     bool write(OLEStreamWriter *stream, bool preservePos=false) const;
 
     /**
-     * Set all the fields to the inital value (default is 0)
+     * Set all the fields to the initial value (default is 0)
      */
     void clear();
 
@@ -8039,7 +8433,7 @@ struct SEP : public Shared {
     bool write(OLEStreamWriter *stream, bool preservePos=false) const;
 
     /**
-     * Set all the fields to the inital value (default is 0)
+     * Set all the fields to the initial value (default is 0)
      */
     void clear();
 
@@ -8074,12 +8468,12 @@ struct SEP : public Shared {
 
     // Data
     /**
-     * break code:
-     * 0 No break
-     * 1 New column
-     * 2 New page
-     * 3 Even page
-     * 4 Odd page
+     * type of the section break:
+     * 0 Continuous section break. The next section starts on the next line.
+     * 1 New column section break. The next section starts in the next column.
+     * 2 New page section break. The next section starts on the next page.
+     * 3 Even page section break. The next section starts on an even page.
+     * 4 Odd page section break. The next section starts on an odd page.
      */
     U8 bkc;
 
@@ -8272,11 +8666,13 @@ struct SEP : public Shared {
 
     /**
      * pgbProp page border properties. page border applies to:
-     * 0 all pages in this section
-     * 1 first page in this section
-     * 2 all pages in this section but first
-     * 3 whole document (all sections)
+     * 0 - The page border applies to all pages in the section.
+     * 1 - The page border applies only to the first page of the section.
+     * 2 - The page border applies to all but the first page of the section.
+     * 3 - whole document (all sections)
      */
+    /* NOTE: 3 - whole document (all sections) - not mentioned in the "Word
+       Binary File Format (.doc) Structure Specification"*/
     U16 pgbApplyTo:3;
 
     /**
@@ -8287,9 +8683,9 @@ struct SEP : public Shared {
     U16 pgbPageDepth:2;
 
     /**
-     * page border offset from:
-     * 0 offset from text
-     * 1 offset from edge of page
+     * Specifies from where the offset of the page border is measured:
+     * 0 - offset measured from the text
+     * 1 - offset measured from the edge of the page
      */
     U16 pgbOffsetFrom:3;
 
@@ -8329,12 +8725,26 @@ struct SEP : public Shared {
     U32 dxaRight;
 
     /**
-     * default value is 1440 twipstop margin
+     * Specifies the height of the top margin, in twips.  A positive value
+     * indicates a minimum top margin; this margin MUST be grown to avoid
+     * overlapping the space that is occupied by headers.  A negative value
+     * indicates a fixed margin; the top margin MUST be the absolute value of
+     * the value that is specified by this SPRM regardless of the space that is
+     * occupied by headers.
+     *
+     * default value is 1440 twips
      */
     S32 dyaTop;
 
     /**
-     * default value is 1440 twipsbottom margin
+     * Specifies the height of the bottom margin, in twips.  A positive value
+     * specifies a minimum bottom margin; this margin MUST be grown to avoid
+     * overlapping the space that is occupied by footers or footnotes.  A
+     * negative value specifies a fixed margin; the bottom margin MUST be the
+     * absolute value of the value that is specified by this SPRM regardless of
+     * the space that is occupied by footers or footnotes.
+     *
+     * default value is 1440 twips
      */
     S32 dyaBottom;
 
@@ -8401,6 +8811,18 @@ struct SEP : public Shared {
      */
     OLST olstAnm;
 
+    /**
+     * Specifies the numbering format used for footnotes.  By default,
+     * footnotes use the msonfcArabic numbering format.
+     */
+    U16 nfcFtnRef;
+
+    /**
+     * Specifies the numbering format used for endnotes.  By default, endnotes
+     * use the msonfcLCRoman numbering format.
+     */
+    U16 nfcEdnRef;
+
 }; // SEP
 
 bool operator==(const SEP &lhs, const SEP &rhs);
@@ -8441,7 +8863,7 @@ struct SEPX {
     bool write(OLEStreamWriter *stream, bool preservePos=false) const;
 
     /**
-     * Set all the fields to the inital value (default is 0)
+     * Set all the fields to the initial value (default is 0)
      */
     void clear();
 
@@ -8464,137 +8886,6 @@ private:
 
 bool operator==(const SEPX &lhs, const SEPX &rhs);
 bool operator!=(const SEPX &lhs, const SEPX &rhs);
-
-
-/**
- * STyle Definition (STD)
- */
-/* This structure has been commented out because we can't handle it correctly
- * Please don't try to fix it here in this file, but rather copy this broken
- * structure definition and fix it in some auxilliary file. If you want to
- * include that aux. file here, please change the template file.
- */
-//struct STD {
-//    /**
-//     * Creates an empty STD structure and sets the defaults
-//     */
-//    STD();
-//    /**
-//     * Simply calls read(...)
-//     */
-//    STD(OLEStreamReader *stream, bool preservePos=false);
-//    /**
-//     * Attention: This struct allocates memory on the heap
-//     */
-//    STD(const STD &rhs);
-//    ~STD();
-
-//    STD &operator=(const STD &rhs);
-
-//    /**
-//     * This method reads the STD structure from the stream.
-//     * If  preservePos is true we push/pop the position of
-//     * the stream to save the state. If it's false the state
-//     * of stream will be changed!
-//     */
-//    bool read(OLEStreamReader *stream, bool preservePos=false);
-
-//    /**
-//     * Same as reading :)
-//     */
-//    bool write(OLEStreamWriter *stream, bool preservePos=false) const;
-
-//    /**
-//     * Set all the fields to the inital value (default is 0)
-//     */
-//    void clear();
-
-//    // Data
-//    /**
-//     * invariant style identifier
-//     */
-//    U16 sti:12;
-
-//    /**
-//     * spare field for any temporary use, always reset back to zero!
-//     */
-//    U16 fScratch:1;
-
-//    /**
-//     * PHEs of all text with this style are wrong
-//     */
-//    U16 fInvalHeight:1;
-
-//    /**
-//     * UPEs have been generated
-//     */
-//    U16 fHasUpe:1;
-
-//    /**
-//     * std has been mass-copied; if unused at save time, style should be deleted
-//     */
-//    U16 fMassCopy:1;
-
-//    /**
-//     * style type code
-//     */
-//    U16 sgc:4;
-
-//    /**
-//     * base style
-//     */
-//    U16 istdBase:12;
-
-//    /**
-//     * # of UPXs (and UPEs)
-//     */
-//    U16 cupx:4;
-
-//    /**
-//     * next style
-//     */
-//    U16 istdNext:12;
-
-//    /**
-//     * offset to end of upx's, start of upe's
-//     */
-//    U16 bchUpe;
-
-//    /**
-//     * auto redefine style when appropriate
-//     */
-//    U16 fAutoRedef:1;
-
-//    /**
-//     * hidden from UI?
-//     */
-//    U16 fHidden:1;
-
-//    /**
-//     * unused bits
-//     */
-//    U16 unused8_3:14;
-
-//    /**
-//     * sub-names are separated by chDelimStyle
-//     */
-//    XCHAR *xstzName;   //    XCHAR xstzName[];
-
-//    U8 *grupx;   //    U8 grupx[];
-
-//    /**
-//     * the UPEs are not stored on the file; they are a cache of the based-on
-//     * chain
-//     */
-//    U8 *grupe;   //    U8 grupe[];
-
-//private:
-//    void clearInternal();
-
-//}; // STD
-
-//bool operator==(const STD &lhs, const STD &rhs);
-//bool operator!=(const STD &lhs, const STD &rhs);
 
 
 /**
@@ -8624,9 +8915,14 @@ struct STSHI {
     bool write(OLEStreamWriter *stream, bool preservePos=false) const;
 
     /**
-     * Set all the fields to the inital value (default is 0)
+     * Set all the fields to the initial value (default is 0)
      */
     void clear();
+
+    /**
+     * Dumps all fields of this structure (for debugging)
+     */
+    void dump() const;
 
     // Size of the structure
     static const unsigned int sizeOf;
@@ -8705,7 +9001,7 @@ struct WKB {
     bool write(OLEStreamWriter *stream, bool preservePos=false) const;
 
     /**
-     * Set all the fields to the inital value (default is 0)
+     * Set all the fields to the initial value (default is 0)
      */
     void clear();
 

@@ -12,7 +12,7 @@
 
    You should have received a copy of the GNU Library General Public License
    along with this library; see the file COPYING.LIB.  If not, write to
-   the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
+   the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
    Boston, MA 02111-1307, USA.
 */
 
@@ -20,6 +20,7 @@
 #define PARAGRAPHPROPERTIES_H
 
 #include "word97_generated.h"
+#include "wv2_export.h"
 
 namespace wvWare
 {
@@ -32,7 +33,7 @@ namespace wvWare
      * we want to pass to the consumer. Right now we have a ListInfo object
      * if the paragraph belongs to some list.
      */
-    class ParagraphProperties : public Shared
+    class WV2_EXPORT ParagraphProperties : public Shared
     {
     public:
         ParagraphProperties();
@@ -45,15 +46,21 @@ namespace wvWare
         /**
          * If this paragraph belongs to a list, the ListInfo object will be
          * valid and contain useful information about the formatting of the
-         * list counter. If the paragraph is not inside a list, this method
-         * will return 0.
+         * list counter. @return 0 if the paragraph is not inside of a list
          */
         const ListInfo* listInfo() const;
 
         /**
-         * @internal
+         * Set the name of the bullet picture into ListInfo.
          */
-        void createListInfo( ListInfoProvider& listInfoProvider );
+        void setBulletPictureName(const QString& name);
+
+        /**
+         * @internal
+         * @param list info provider
+         * @param pragraph mark's CHPs
+         */
+        void createListInfo( ListInfoProvider& listInfoProvider, Word97::CHP& chp );
 
     private:
         ParagraphProperties& operator=( const ParagraphProperties& rhs );

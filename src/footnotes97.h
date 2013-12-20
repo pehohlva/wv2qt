@@ -1,5 +1,6 @@
 /* This file is part of the wvWare 2 project
    Copyright (C) 2002-2003 Werner Trobin <trobin@kde.org>
+   Copyright (C) 2011 Matus Uzak <matus.uzak@ixonos.com>
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -12,7 +13,7 @@
 
    You should have received a copy of the GNU Library General Public License
    along with this library; see the file COPYING.LIB.  If not, write to
-   the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
+   the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
    Boston, MA 02111-1307, USA.
 */
 
@@ -23,6 +24,7 @@
 #include "functordata.h"
 
 #include <vector>
+#include "wv2_export.h"
 
 namespace wvWare
 {
@@ -48,7 +50,7 @@ namespace wvWare
         /**
          * Get the FootnoteData for the footnote/endnote at @param globalCP.
          * The @param ok flag is true if a footnote/endnote has been found.
-         * If @þaram ok is false no footnote/endnote has been found and the
+         * If @param ok is false no footnote/endnote has been found and the
          * returned FootnoteData structure is invalid.
          */
         FootnoteData footnote( U32 globalCP, bool& ok );
@@ -63,6 +65,13 @@ namespace wvWare
          * 0xffffffff if none exists.
          */
         U32 nextEndnote() const;
+
+        /**
+         * Check for unprocessed footnotes/endnotes located before @param
+         * globalCP.  This might be the result of a skipped chunk or
+         * overlapping.  Any unprocessed footnotes/endnotes are skipped.
+         */
+        void check( U32 globalCP );
 
     private:
         Footnotes97( const Footnotes97& rhs );

@@ -12,7 +12,7 @@
 
    You should have received a copy of the GNU Library General Public License
    along with this library; see the file COPYING.LIB.  If not, write to
-   the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
+   the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
    Boston, MA 02111-1307, USA.
 */
 
@@ -22,6 +22,7 @@
 #include <string>
 
 #include "word_helper.h"
+#include "wv2_export.h"
 
 using std::string;
 
@@ -42,6 +43,10 @@ namespace wvWare
         Drawings( OLEStreamReader* table, const Word97::FIB &fib );
         ~Drawings();
 
+        const PLCF<Word97::FSPA>* getSpaMom() const { return m_plcfspaMom; };
+        const PLCF<Word97::FSPA>* getSpaHdr() const { return m_plcfspaHdr; };
+        const PLCF<Word97::FTXBXS>* getTxbxTxt() const { return m_plcftxbxTxt; };
+        const PLCF<Word97::FTXBXS>* getHdrTxbxTxt() const { return m_plcfHdrtxbxTxt; };
     private:
         Drawings( const Drawings& rhs );
         Drawings& operator=( const Drawings& rhs );
@@ -69,7 +74,7 @@ namespace wvWare
 
     typedef enum
     {                          // GEL provided types...
-        msoblipERROR = 0,          // An error occured during loading
+        msoblipERROR = 0,          // An error occurred during loading
         msoblipUNKNOWN,            // An unknown blip type
         msoblipEMF,                // Windows Enhanced Metafile
         msoblipWMF,                // Windows Metafile
@@ -94,24 +99,27 @@ namespace wvWare
         msobiClient=0x800       // Clients should set this bit
     } MSOBI;                     // Blip signature as encoded in the MSOFBH.inst
 
+
+
     //this is a common header that every record
     //in Escher streams share
     class EscherHeader
     {
     public:
-        EscherHeader( OLEStreamReader* stream );
+        explicit EscherHeader( OLEStreamReader* stream );
         ~EscherHeader();
 
         bool isAtom();
         int recordSize();
+        int recordInstance();
         string getRecordType();
         void dump();
 
     private:
-        U32 ver:4; //4 bits
-        U32 inst:12; //12 bits
-        U32 fbt:16; //16 bits
-        U32 cbLength; //4 bytes
+        U32 recVer:4; //4 bits
+        U32 recInstance:12; //12 bits
+        U32 recType:16; //16 bits
+        U32 recLen; //4 bytes
     }; //EscherHeader
 
     //msofbtSpContainer
@@ -124,12 +132,14 @@ namespace wvWare
     class FBSE
     {
     public:
-        FBSE( OLEStreamReader* stream );
+        explicit FBSE( OLEStreamReader* stream );
         ~FBSE();
 
         int recordSize();//size of the record without the Escher header
                     //(does NOT include actual picture data, either, which is in a
                     //new record)
+
+        U8* getRgbUid();
         int getBlipType();
         int getStreamOffset();
         int getNameLength();

@@ -12,7 +12,7 @@
 
    You should have received a copy of the GNU Library General Public License
    along with this library; see the file COPYING.LIB.  If not, write to
-   the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
+   the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
    Boston, MA 02111-1307, USA.
 */
 
@@ -20,6 +20,7 @@
 #define FIELDS_H
 
 #include "parser.h"
+#include "wv2_export.h"
 
 namespace wvWare
 {
@@ -28,6 +29,7 @@ namespace wvWare
         struct FIB;
     }
     template<class T> class PLCF;
+    template<class T> class PLCFMap;
     class OLEStreamReader;
 
     struct FLD
@@ -49,7 +51,7 @@ namespace wvWare
             struct
             {
                 U8 fDiffer:1;
-                U8 fZomieEmbed:1;
+                U8 fZombieEmbed:1;
                 U8 fResultDirty:1;
                 U8 fResultEdited:1;
                 U8 fLocked:1;
@@ -79,17 +81,18 @@ namespace wvWare
         Fields( const Fields& rhs );
         Fields& operator=( const Fields& rhs );
 
-        void read( U32 fc, U32 lcb, OLEStreamReader* tableStream, PLCF<FLD>** plcf );
+        void read( U32 fc, U32 lcb, OLEStreamReader* tableStream, PLCFMap<FLD>** plcf );
         void sanityCheck( const OLEStreamReader* tableStream, U32 nextFC, U32 lcb ) const;
-        const FLD* fldForCP( const PLCF<FLD>* plcf, U32 cp ) const;
+        const FLD* fldForCP( const PLCFMap<FLD>* plcf, U32 cp ) const;
 
-        PLCF<FLD>* m_main;
-        PLCF<FLD>* m_header;
-        PLCF<FLD>* m_footnote;
-        PLCF<FLD>* m_annotation;
-        PLCF<FLD>* m_endnote;
-        PLCF<FLD>* m_textbox;
-        PLCF<FLD>* m_headerTextbox;
+        PLCFMap<FLD>* m_main;
+        PLCFMap<FLD>* m_header;
+        PLCFMap<FLD>* m_footnote;
+        PLCFMap<FLD>* m_annotation;
+        PLCFMap<FLD>* m_endnote;
+        PLCFMap<FLD>* m_textbox;
+        PLCFMap<FLD>* m_headerTextbox;
+        PLCFMap<FLD>* m_bookmark;
     };
 
 } // namespace wvWare

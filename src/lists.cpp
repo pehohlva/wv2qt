@@ -12,10 +12,11 @@
 
    You should have received a copy of the GNU Library General Public License
    along with this library; see the file COPYING.LIB.  If not, write to
-   the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
+   the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
    Boston, MA 02111-1307, USA.
 */
 
+#include "msdoc.h"
 #include "lists.h"
 #include "olestream.h"
 #include "word97_generated.h"
@@ -23,8 +24,8 @@
 #include "utilities.h"
 #include "styles.h"
 #include "crc32.h"
-
 #include "wvlog.h"
+#include "CmdDebug.h"
 #include <algorithm>
 
 // Private API
@@ -122,6 +123,8 @@ namespace wvWare
         bool isWord6() const;  // ###### Do we want to have that?
         UString text() const;
         U8 followingChar() const;
+        U16 space() const;
+        U16 indent() const;
 
         void applyGrpprlPapx( Word97::PAP* pap, const StyleSheet* styleSheet ) const;
         void applyGrpprlChpx( Word97::CHP* chp, const Style* style, const StyleSheet* styleSheet ) const;
@@ -229,13 +232,13 @@ ListLevel::ListLevel( OLEStreamReader* tableStream ) :
     m_lvlf( tableStream, false ), m_grpprlPapx( 0 ), m_grpprlChpx( 0 )
 {
 #ifdef WV2_DEBUG_LIST_READING
-    wvlog << "   ListLevel::ListLevel() ######" << std::endl
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"######" << endl
           << "      iStartAt=" << static_cast<int>( m_lvlf.iStartAt ) << " nfc=" << static_cast<int>( m_lvlf.nfc )
-          << " jc=" << static_cast<int>( m_lvlf.jc ) << std::endl << "      fLegal=" << static_cast<int>( m_lvlf.fLegal )
+          << " jc=" << static_cast<int>( m_lvlf.jc ) << endl << "      fLegal=" << static_cast<int>( m_lvlf.fLegal )
           << " fNoRestart=" << static_cast<int>( m_lvlf.fNoRestart ) << " fPrev=" << static_cast<int>( m_lvlf.fPrev )
-          << std::endl << "      fPrevSpace=" << static_cast<int>( m_lvlf.fPrevSpace ) << " fWord6="
-          << static_cast<int>( m_lvlf.fWord6 ) << std::endl << "      cbGrpprlPapx=" << static_cast<int>( m_lvlf.cbGrpprlPapx )
-          << " cbGrpprlChpx=" << static_cast<int>( m_lvlf.cbGrpprlChpx ) << std::endl;
+          << endl << "      fPrevSpace=" << static_cast<int>( m_lvlf.fPrevSpace ) << " fWord6="
+          << static_cast<int>( m_lvlf.fWord6 ) << endl << "      cbGrpprlPapx=" << static_cast<int>( m_lvlf.cbGrpprlPapx )
+          << " cbGrpprlChpx=" << static_cast<int>( m_lvlf.cbGrpprlChpx ) << endl;
 #endif
 
     if ( m_lvlf.cbGrpprlPapx != 0 ) {
@@ -270,13 +273,13 @@ ListLevel::ListLevel( const Word97::ANLD& anld ) : m_grpprlPapx( 0 ), m_grpprlCh
 
     // number text
 #ifdef WV2_DEBUG_LIST_PROCESSING
-    wvlog << "cxchTextBefore=" << static_cast<int>( anld.cxchTextBefore ) << " cxchTextAfter="
-          << static_cast<int>( anld.cxchTextAfter ) << std::endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"cxchTextBefore=" << static_cast<int>( anld.cxchTextBefore ) << " cxchTextAfter="
+          << static_cast<int>( anld.cxchTextAfter ) << endl;
 #endif
     if ( anld.cxchTextBefore > 0 && anld.cxchTextBefore <= 32 ) {
         m_numberText = UString( reinterpret_cast<const UChar*>( &anld.rgxch[ 0 ] ), anld.cxchTextBefore );
 #ifdef WV2_DEBUG_LIST_PROCESSING
-        wvlog << "String (before): '" << m_numberText.ascii() << "'" << std::endl;
+        wvlog << __FILE__ << ":" << __LINE__ << " - " <<"String (before): '" << m_numberText.ascii() << "'" << endl;
 #endif
     }
     m_numberText += UString( static_cast<char>( 0 ) ); // we are faking list level 0, so we have
@@ -285,7 +288,7 @@ ListLevel::ListLevel( const Word97::ANLD& anld ) : m_grpprlPapx( 0 ), m_grpprlCh
         int start = anld.cxchTextAfter > anld.cxchTextBefore ? anld.cxchTextBefore : 0;
         m_numberText += UString( reinterpret_cast<const UChar*>( &anld.rgxch[ start ] ), anld.cxchTextAfter - start );
 #ifdef WV2_DEBUG_LIST_PROCESSING
-        wvlog << "String (after): '" << UString( reinterpret_cast<const UChar*>( &anld.rgxch[ start ] ), anld.cxchTextAfter - start ).ascii() << "'" << std::endl;
+        wvlog << __FILE__ << ":" << __LINE__ << " - " <<"String (after): '" << UString( reinterpret_cast<const UChar*>( &anld.rgxch[ start ] ), anld.cxchTextAfter - start ).ascii() << "'" << endl;
 #endif
     }
 
@@ -316,7 +319,7 @@ ListLevel::ListLevel( const Word97::ANLD& anld ) : m_grpprlPapx( 0 ), m_grpprlCh
     m_lvlf.cbGrpprlChpx += writeCharProperty( sprmCHps, anld.hps, &grpprl );
 
 #ifdef WV2_DEBUG_LIST_PROCESSING
-    wvlog << "The CHPX is " << static_cast<int>( m_lvlf.cbGrpprlChpx ) << " bytes long" << std::endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"The CHPX is " << static_cast<int>( m_lvlf.cbGrpprlChpx ) << " bytes long" << endl;
 #endif
 }
 
@@ -376,10 +379,20 @@ U8 ListLevel::followingChar() const
     return m_lvlf.ixchFollow;
 }
 
+U16 ListLevel::space() const
+{
+    return m_lvlf.dxaSpace;
+}
+
+U16 ListLevel::indent() const
+{
+    return m_lvlf.dxaIndent;
+}
+
 void ListLevel::applyGrpprlPapx( Word97::PAP* pap, const StyleSheet* styleSheet ) const
 {
 #ifdef WV2_DEBUG_LIST_PROCESSING
-    wvlog << "      ListLevel::applyGrpprlPapx: cbGrpprlPapx=" << static_cast<int>( m_lvlf.cbGrpprlPapx ) << std::endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"cbGrpprlPapx=" << static_cast<int>( m_lvlf.cbGrpprlPapx ) << endl;
 #endif
     if ( m_grpprlPapx )
         pap->apply( m_grpprlPapx, m_lvlf.cbGrpprlPapx, 0, styleSheet, 0, Word8 );
@@ -388,7 +401,7 @@ void ListLevel::applyGrpprlPapx( Word97::PAP* pap, const StyleSheet* styleSheet 
 void ListLevel::applyGrpprlChpx( Word97::CHP* chp, const Style* style, const StyleSheet* styleSheet ) const
 {
 #ifdef WV2_DEBUG_LIST_PROCESSING
-    wvlog << "      ListLevel::applyGrpprlChpx: cbGrpprlChpx=" << static_cast<int>( m_lvlf.cbGrpprlChpx ) << std::endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"cbGrpprlChpx=" << static_cast<int>( m_lvlf.cbGrpprlChpx ) << endl;
 #endif
     if ( m_grpprlChpx )
         chp->apply( m_grpprlChpx, m_lvlf.cbGrpprlChpx, style, styleSheet, 0, Word8 );
@@ -415,9 +428,10 @@ int ListLevel::writeCharProperty( U16 sprm, U16 value, U8** grpprl )
 ListData::ListData( OLEStreamReader* tableStream ) : m_lstf( tableStream, false )
 {
 #ifdef WV2_DEBUG_LIST_READING
-    wvlog << "   ListData::ListData() ######" << std::endl
-          << "      lsid=" << m_lstf.lsid << " fSimpleList=" << static_cast<int>( m_lstf.fSimpleList )
-          << " tlpc=" << m_lstf.tplc << std::endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"######" << endl
+          << " lsid= 0x" << hex << m_lstf.lsid << dec
+          << " fSimpleList=" << static_cast<int>( m_lstf.fSimpleList )
+          << " tlpc=" << m_lstf.tplc << endl;
 #endif
 }
 
@@ -458,7 +472,7 @@ bool ListData::restartingCounter() const
 void ListData::appendListLevel( ListLevel* listLevel )
 {
 #ifdef WV2_DEBUG_LIST_READING
-    wvlog << "      ListData::appendListLevel() this=" << std::hex << reinterpret_cast<int>( this ) << std::dec << std::endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"this=" << hex << reinterpret_cast<int>( this ) << dec << endl;
 #endif
     m_listLevels.push_back( listLevel );
 }
@@ -473,7 +487,7 @@ const ListLevel* ListData::listLevel( U8 level ) const
 void ListData::applyGrpprlPapx( Word97::PAP* pap, const StyleSheet* styleSheet ) const
 {
 #ifdef WV2_DEBUG_LIST_PROCESSING
-    wvlog << "   ListData::applyGrpprlPapx(): level=" << static_cast<int>( pap->ilvl ) << std::endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"level=" << static_cast<int>( pap->ilvl ) << endl;
 #endif
 
     if ( !pap || pap->ilvl >= maxListLevels || ( m_lstf.fSimpleList && pap->ilvl != 0 ) )
@@ -482,15 +496,16 @@ void ListData::applyGrpprlPapx( Word97::PAP* pap, const StyleSheet* styleSheet )
     if ( lvl )
         lvl->applyGrpprlPapx( pap, styleSheet );
     else
-        wvlog << "Bug: Didn't find the level " << pap->ilvl << " in the LSTF!" << std::endl;
+        wvlog << __FILE__ << ":" << __LINE__ << " - " <<"Bug: Didn't find the level " << pap->ilvl << " in the LSTF!" << endl;
 }
 
 
 ListFormatOverrideLVL::ListFormatOverrideLVL( OLEStreamReader* tableStream ) :
     m_lfolvl( tableStream, false ), m_level( 0 )
 {
-    if ( m_lfolvl.fFormatting )
+    if ( m_lfolvl.fFormatting ) {
         m_level = new ListLevel( tableStream );
+    }
 }
 
 ListFormatOverrideLVL::~ListFormatOverrideLVL()
@@ -530,19 +545,19 @@ const ListLevel* ListFormatOverrideLVL::listLevel() const
 
 void ListFormatOverrideLVL::dump() const
 {
-    wvlog << "   ListFormatOverrideLVL::dump() ------------" << std::endl
-          << "      iStartAt=" << m_lfolvl.iStartAt << " ilvl=" << static_cast<int>( m_lfolvl.ilvl ) << std::endl
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"------------" << endl
+          << "      iStartAt=" << m_lfolvl.iStartAt << " ilvl=" << static_cast<int>( m_lfolvl.ilvl ) << endl
           << "      fStartAt=" << static_cast<int>( m_lfolvl.fStartAt ) << " fFormatting="
-          << static_cast<int>( m_lfolvl.fFormatting ) << std::endl
-          << "   ListFormatOverrideLVL::dump() done" << std::endl;
+          << static_cast<int>( m_lfolvl.fFormatting ) << endl
+          << "done" << endl;
 }
 
 
 ListFormatOverride::ListFormatOverride( OLEStreamReader* tableStream ) : m_lfo( tableStream, false )
 {
 #ifdef WV2_DEBUG_LIST_READING
-    wvlog << "   ListFormatOverride:ListFormatOverride() ######" << std::endl
-          << "      lsid=" << m_lfo.lsid << " clfolvl=" << static_cast<int>( m_lfo.clfolvl ) << std::endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"######" << endl
+          << " lsid= 0x" << hex << m_lfo.lsid << dec << " clfolvl=" << static_cast<int>( m_lfo.clfolvl ) << endl;
 #endif
 }
 
@@ -591,13 +606,15 @@ ListText::~ListText()
 }
 
 
-ListInfo::ListInfo( Word97::PAP& pap, ListInfoProvider& listInfoProvider ) :
+ListInfo::ListInfo( Word97::PAP& pap, Word97::CHP& chp, ListInfoProvider& listInfoProvider ) :
     m_linkedIstd( istdNil ), m_restartingCounter( false ), m_numberFormat( 0 ),
     m_alignment( 0 ), m_isLegal( false ), m_notRestarted( false ), m_prev( false ),
-    m_prevSpace( false ), m_isWord6( false ), m_followingChar( 0 ), m_lsid( 0 )
+    m_prevSpace( false ), m_isWord6( false ), m_followingChar( 0 ), m_lsid( 0 ),
+    m_space( 0 ), m_indent( 0 ), m_picAutoSize( false ), m_type( NumberType )
 {
-    if ( !listInfoProvider.setPAP( &pap ) )
+    if ( !listInfoProvider.setPAP( &pap ) ) {
         return;
+    }
     const ListLevel* const level = listInfoProvider.formattingListLevel();
     const ListData* const listData = listInfoProvider.m_currentLst;
 
@@ -605,13 +622,14 @@ ListInfo::ListInfo( Word97::PAP& pap, ListInfoProvider& listInfoProvider ) :
         m_linkedIstd = listData->istdForLevel( pap.ilvl );
         m_restartingCounter = listData->restartingCounter();
         m_lsid = listData->lsid();
+    } else {
+        wvlog << __FILE__ << ":" << __LINE__ << " - " <<"Bug: The ListData is 0!!" << endl;
     }
-    else
-        wvlog << "Bug: The ListData is 0!!" << std::endl;
 
     m_startAt = listInfoProvider.startAt();
 
     if ( level ) {
+
         m_numberFormat = level->numberFormat();
         m_alignment = level->alignment();
         m_isLegal = level->isLegal();
@@ -619,29 +637,50 @@ ListInfo::ListInfo( Word97::PAP& pap, ListInfoProvider& listInfoProvider ) :
         m_prev = level->prev();
         m_prevSpace = level->prevSpace();
         m_isWord6 = level->isWord6();
-        m_text = listInfoProvider.text();
         m_followingChar = level->followingChar();
+        m_space = level->space();
+        m_indent = level->indent();
+
+        if (m_numberFormat == msonfcBullet) {
+            m_type = BulletType;
+        }
+
+        // A label does NOT inherit Underline from text-properties of
+        // the paragraph mark.  A bullet does not inherit {Italics,
+        // Bold}.
+        if (m_type != NumberType) {
+            chp.fItalic = 0;
+            chp.fBold = 0;
+        }
+        chp.kul = 0;
+
+        m_text = listInfoProvider.text(chp);
+
+        if (m_text.chp->fPicBullet) {
+            m_type = PictureType;
+            m_picAutoSize = !m_text.chp->fNoAutoSize;
+        }
+    } else {
+        wvlog << __FILE__ << ":" << __LINE__ << " - " <<"Bug: The ListLevel is 0!!" << endl;
     }
-    else
-        wvlog << "Bug: The ListLevel is 0!!" << std::endl;
 }
 
 void ListInfo::dump() const
 {
-    wvlog << "ListInfo::dump() ------------------------------" << std::endl;
-    wvlog << "   linkedIstd=" << m_linkedIstd << std::endl
-          << "   restartingCounter=" << m_restartingCounter << " startAt=" << m_startAt.first << std::endl
-          << "   startAtOverridden=" << m_startAt.second << std::endl
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"------------------------------" << endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"   linkedIstd=" << m_linkedIstd << endl
+          << "   restartingCounter=" << m_restartingCounter << " startAt=" << m_startAt.first << endl
+          << "   startAtOverridden=" << m_startAt.second << endl
           << "   numberFormat=" << static_cast<int>( m_numberFormat ) << " alignment="
-          << static_cast<int>( m_alignment ) << std::endl << "   isLegal=" << m_isLegal
-          << " notRestarted=" << m_notRestarted << std::endl << "   prev=" << m_prev
-          << " prevSpace=" << m_prevSpace << std::endl << "   isWord6=" << m_isWord6
+          << static_cast<int>( m_alignment ) << endl << "   isLegal=" << m_isLegal
+          << " notRestarted=" << m_notRestarted << endl << "   prev=" << m_prev
+          << " prevSpace=" << m_prevSpace << endl << "   isWord6=" << m_isWord6
           << " text= '";
     for ( int i = 0; i < m_text.text.length(); ++i )
-        wvlog << "<" << static_cast<char>( m_text.text[ i ].low() ) << "/" << m_text.text[ i ].unicode() << ">";
-    wvlog << "'" << std::endl
-          << "   followingChar=" << static_cast<int>( m_followingChar ) << std::endl
-          << "ListInfo::dump() done -------------------------" << std::endl;
+        wvlog << __FILE__ << ":" << __LINE__ << " - " <<"<" << static_cast<char>( m_text.text[ i ].low() ) << "/" << m_text.text[ i ].unicode() << ">";
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"'" << endl
+          << "   followingChar=" << static_cast<int>( m_followingChar ) << endl
+          << "ListInfo::dump() done -------------------------" << endl;
 }
 
 
@@ -650,8 +689,8 @@ ListInfoProvider::ListInfoProvider( const StyleSheet* styleSheet )
       m_currentLst( 0 ), m_version( Word67 )
 {
 #ifdef WV2_DEBUG_LIST_READING
-    wvlog << "ListInfoProvider::ListInfoProvider() ################################" << std::endl
-          << " ---> pre-Word 8" << std::endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"################################" << endl
+          << " ---> pre-Word 8" << endl;
 #endif
 }
 
@@ -659,43 +698,45 @@ ListInfoProvider::ListInfoProvider( OLEStreamReader* tableStream, const Word97::
     m_listNames( 0 ), m_pap( 0 ), m_styleSheet( styleSheet ), m_currentLfoLVL( 0 ), m_currentLst( 0 ), m_version( Word8 )
 {
 #ifdef WV2_DEBUG_LIST_READING
-    wvlog << "ListInfoProvider::ListInfoProvider() ################################" << std::endl
-          << "   fcPlcfLst=" << fib.fcPlcfLst << " lcbPlcfLst=" << fib.lcbPlcfLst << std::endl
-          << "   fcPlfLfo=" << fib.fcPlfLfo << " lcbPlfLfo=" << fib.lcbPlfLfo << std::endl
-          << "   fcSttbListNames=" << fib.fcSttbListNames << " lcbSttbListNames=" << fib.lcbSttbListNames << std::endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"################################" << endl
+          << "   fcPlcfLst=" << fib.fcPlcfLst << " lcbPlcfLst=" << fib.lcbPlcfLst << endl
+          << "   fcPlfLfo=" << fib.fcPlfLfo << " lcbPlfLfo=" << fib.lcbPlfLfo << endl
+          << "   fcSttbListNames=" << fib.fcSttbListNames << " lcbSttbListNames=" << fib.lcbSttbListNames << endl;
 #endif
 
     tableStream->push();
     if ( fib.lcbPlcfLst != 0 ) {
-        tableStream->seek( fib.fcPlcfLst, G_SEEK_SET );
+        tableStream->seek( fib.fcPlcfLst, WV2_SEEK_SET );
         readListData( tableStream, fib.fcPlcfLst + fib.lcbPlcfLst );
     }
     if ( fib.lcbPlfLfo != 0 ) {
         if ( static_cast<U32>( tableStream->tell() ) != fib.fcPlfLfo ) {
-            wvlog << "Found a \"hole\" within the table stream (list data): current="
-                  << tableStream->tell() << " expected=" << fib.fcPlfLfo << std::endl;
-            tableStream->seek( fib.fcPlfLfo, G_SEEK_SET );
+            wvlog << __FILE__ << ":" << __LINE__ << " - " <<"Found a \"hole\" within the table stream (list data): current="
+                  << tableStream->tell() << " expected=" << fib.fcPlfLfo << endl;
+            tableStream->seek( fib.fcPlfLfo, WV2_SEEK_SET );
         }
         readListFormatOverride( tableStream );
     }
     if ( fib.lcbSttbListNames != 0 ) {
         // Get rid of leading garbage. Take care, though, as the STTBF most likely starts
         // with 0xffff (extended character STTBF)
-        while ( static_cast<U32>( tableStream->tell() ) < fib.fcSttbListNames &&
-                tableStream->readU8() == 0xff ); // the ; is intended!
+        while ( (static_cast<U32>( tableStream->tell() ) < fib.fcSttbListNames) &&
+                tableStream->readU8() == 0xff )
+        {
+        }
 
         // Check the position and warn about corrupt files
         if ( static_cast<U32>( tableStream->tell() ) != fib.fcSttbListNames ) {
-            wvlog << "Found a \"hole\" within the table stream (list format override): current="
-                  << tableStream->tell() << " expected=" << fib.fcSttbListNames << std::endl;
-            tableStream->seek( fib.fcSttbListNames, G_SEEK_SET );
+            wvlog << __FILE__ << ":" << __LINE__ << " - " <<"Found a \"hole\" within the table stream (list format override): current="
+                  << tableStream->tell() << " expected=" << fib.fcSttbListNames << endl;
+            tableStream->seek( fib.fcSttbListNames, WV2_SEEK_SET );
         }
         readListNames( tableStream );
     }
     tableStream->pop();
 
 #ifdef WV2_DEBUG_LIST_READING
-    wvlog << "ListInfoProvider::ListInfoProvider() done ###########################" << std::endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"done ###########################" << endl;
 #endif
 }
 
@@ -717,8 +758,8 @@ bool ListInfoProvider::isValid( S16 ilfo, U8 nLvlAnm ) const
 bool ListInfoProvider::setPAP( Word97::PAP* pap )
 {
 #ifdef WV2_DEBUG_LIST_PROCESSING
-    wvlog << "ListInfoProvider::setPAP(): nLvlAnm = " << static_cast<int>( pap->nLvlAnm )
-          << " ilfo = " << pap->ilfo << std::endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"nLvlAnm = " << static_cast<int>( pap->nLvlAnm )
+          << " ilfo = " << pap->ilfo << endl;
 #endif
     // Is it a list paragraph at all?
     if ( ( m_version == Word67 ? static_cast<S16>( pap->nLvlAnm ) : pap->ilfo ) < 1 )  {
@@ -738,7 +779,7 @@ bool ListInfoProvider::setPAP( Word97::PAP* pap )
             if ( pap->ilfo == oldStyleIlfo )
                 convertCompatANLD();
             else {
-                wvlog << "Bug: ListInfoProvider::setWord97StylePAP -- out of bounds access (ilfo=" << pap->ilfo << ")" << std::endl;
+                wvlog << __FILE__ << ":" << __LINE__ << " - " <<"Bug: ListInfoProvider::setWord97StylePAP -- out of bounds access (ilfo=" << pap->ilfo << ")" << endl;
                 m_pap = 0;
                 m_currentLfoLVL = 0;
                 m_currentLst = 0;
@@ -754,29 +795,33 @@ void ListInfoProvider::readListData( OLEStreamReader* tableStream, const U32 end
 {
     const U16 count = tableStream->readU16();
 #ifdef WV2_DEBUG_LIST_READING
-    wvlog << "ListInfoProvider::readListData(): count=" << count << std::endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"count=" << count << endl;
 #endif
-    for ( int i = 0; i < count; ++i )
+    for ( int i = 0; i < count; ++i ) {
         m_listData.push_back( new ListData( tableStream ) );
+    }
 
-    // Note that this is a bug in the spec, but it at least seems to be a "stable" bug ;)
-    if ( static_cast<U32>( tableStream->tell() ) != endOfLSTF )
-        wvlog << "Expected a different size of this plcflst! (expected: "
-              << endOfLSTF << " position: " << tableStream->tell() << ")" << std::endl;
+    // NOTE: this is a bug in the spec, but it at least seems to be a "stable" bug ;)
+    if ( static_cast<U32>( tableStream->tell() ) != endOfLSTF ) {
+        wvlog << __FILE__ << ":" << __LINE__ << " - " <<"Expected a different size of this plcflst! (expected: "
+              << endOfLSTF << " position: " << tableStream->tell() << ")" << endl;
+    }
 
 #ifdef WV2_DEBUG_LIST_READING
-    wvlog << "ListInfoProvider::readListData(): 2nd step -- reading the LVLFs" << std::endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"2nd step -- reading the LVLFs" << endl;
 #endif
-    // Now read in the ListLevels for each ListData
-    // If fSimpleList is true we only have one level, else there are nine
+    // Now read in the ListLevels for each ListData. If fSimpleList is true
+    // there is only 1 level, else there are 9.
     std::vector<ListData*>::const_iterator it = m_listData.begin();
     std::vector<ListData*>::const_iterator end = m_listData.end();
     for ( ; it != end; ++it ) {
-        if ( ( *it )->isSimpleList() )
+        if ( ( *it )->isSimpleList() ) {
             ( *it )->appendListLevel( new ListLevel( tableStream ) );
-        else
-            for ( int i = 0; i < maxListLevels; ++i )
+        } else {
+            for ( int i = 0; i < maxListLevels; ++i ) {
                 ( *it )->appendListLevel( new ListLevel( tableStream ) );
+            }
+        }
     }
 }
 
@@ -784,18 +829,19 @@ void ListInfoProvider::readListFormatOverride( OLEStreamReader* tableStream )
 {
     const U32 count = tableStream->readU32();
 #ifdef WV2_DEBUG_LIST_READING
-    wvlog << "ListInfoProvider::readListFormatOverride(): count=" << count << std::endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"count=" << count << endl;
 #endif
-    for ( U32 i = 0; i < count; ++i )
+    for ( U32 i = 0; i < count; ++i ) {
         m_listFormatOverride.push_back( new ListFormatOverride( tableStream ) );
+    }
 
     std::vector<ListFormatOverride*>::const_iterator it = m_listFormatOverride.begin();
     std::vector<ListFormatOverride*>::const_iterator end = m_listFormatOverride.end();
     for ( ; it != end; ++it ) {
         const U8 levelCount = ( *it )->countOfLevels();
         for ( int i = 0; i < levelCount; ++i ) {
-            // Word seems to write 0xff pagging-bytes between LFO and LFOLVLs, also
-            // between different LFOLVLs, get rid of it (Werner)
+            // Word seems to write 0xff pagging-bytes between LFO and LFOLVLs,
+            // also between different LFOLVLs, get rid of it (Werner)
             eatLeading0xff( tableStream );
             ( *it )->appendListFormatOverrideLVL( new ListFormatOverrideLVL( tableStream ) );
         }
@@ -805,7 +851,7 @@ void ListInfoProvider::readListFormatOverride( OLEStreamReader* tableStream )
 void ListInfoProvider::readListNames( OLEStreamReader* tableStream )
 {
 #ifdef WV2_DEBUG_LIST_READING
-    wvlog << "ListInfoProvider::readListNames()" << std::endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"" << endl;
 #endif
     m_listNames = new STTBF( usLid, tableStream, false );
 #ifdef WV2_DEBUG_LIST_READING
@@ -815,14 +861,14 @@ void ListInfoProvider::readListNames( OLEStreamReader* tableStream )
 
 void ListInfoProvider::eatLeading0xff( OLEStreamReader* tableStream )
 {
-    while ( tableStream->readU8() == 0xff ); // semicolon intended ;)
-    tableStream->seek( -1, G_SEEK_CUR ); // rewind the stream
+    while ( tableStream->readU8() == 0xff ) {}
+    tableStream->seek( -1, WV2_SEEK_CUR ); // rewind the stream
 }
 
 void ListInfoProvider::processOverride( ListFormatOverride* lfo )
 {
 #ifdef WV2_DEBUG_LIST_PROCESSING
-    wvlog << "   ListInfoProvider::processOverride()" << std::endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"" << endl;
 #endif
     bool appliedPapx = false;
     // It turns out we need a non-const pointer, as we have to reset the
@@ -831,7 +877,7 @@ void ListInfoProvider::processOverride( ListFormatOverride* lfo )
 
     if ( m_currentLfoLVL ) {
 #ifdef WV2_DEBUG_LIST_PROCESSING
-        wvlog << "      Level " << static_cast<int>( m_pap->ilvl ) << " found:" << std::endl;
+        wvlog << __FILE__ << ":" << __LINE__ << " - " <<"      Level " << static_cast<int>( m_pap->ilvl ) << " found:" << endl;
         m_currentLfoLVL->dump();
 #endif
         if ( m_currentLfoLVL->overridesFormat() && m_currentLfoLVL->listLevel() ) {
@@ -861,8 +907,7 @@ void ListInfoProvider::convertCompatANLD()
     const S32 lsid = createFakeLSID( m_pap->anld );
     m_pap->ilvl = 0;
 #ifdef WV2_DEBUG_LIST_PROCESSING
-    wvlog << "   ListInfoProvider::convertCompatANLD" << std::endl
-          << "      generated a unique lsid: " << lsid << std::endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"      generated a unique lsid: " << lsid << endl;
 #endif
 
     // Does it already exist?
@@ -888,7 +933,7 @@ void ListInfoProvider::convertCompatANLD()
 ListData* ListInfoProvider::findLST( S32 lsid )
 {
 #ifdef WV2_DEBUG_LIST_PROCESSING
-    wvlog << "   ListInfoProvider::findLST: lsid=" << lsid << std::endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"lsid=" << lsid << endl;
 #endif
     std::vector<ListData*>::const_iterator it = m_listData.begin();
     std::vector<ListData*>::const_iterator end = m_listData.end();
@@ -925,20 +970,22 @@ std::pair<S32, bool> ListInfoProvider::startAt()
     return start;
 }
 
-ListText ListInfoProvider::text() const
+ListText ListInfoProvider::text(const Word97::CHP& chp) const
 {
     ListText ret;
     ret.text = formattingListLevel()->text();
+    ret.chp = new Word97::CHP( chp );
+    Style style( chp );
 
     // Get the appropriate style for this paragraph
-    const Style* style = m_styleSheet->styleByIndex( m_pap->istd );
-    if ( !style ) {
-        wvlog << "Bug: Huh, really obscure error, couldn't find the Style for the current PAP" << std::endl;
-        ret.chp = new Word97::CHP;
-    }
-    else
-        ret.chp = new Word97::CHP( style->chp() );
+    // const Style* style = m_styleSheet->styleByIndex( m_pap->istd );
+    // if ( !style ) {
+    //     wvlog << __FILE__ << ":" << __LINE__ << " - " <<"Bug: Huh, really obscure error, couldn't find the Style for the current PAP" << endl;
+    //     ret.chp = new Word97::CHP;
+    // } else {
+    //     ret.chp = new Word97::CHP( style->chp() );
+    // }
 
-    formattingListLevel()->applyGrpprlChpx( ret.chp, style, m_styleSheet );
+    formattingListLevel()->applyGrpprlChpx( ret.chp, &style, m_styleSheet );
     return ret;
 }

@@ -12,7 +12,7 @@
 
    You should have received a copy of the GNU Library General Public License
    along with this library; see the file COPYING.LIB.  If not, write to
-   the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
+   the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
    Boston, MA 02111-1307, USA.
 */
 
@@ -31,7 +31,7 @@ AssociatedStrings::AssociatedStrings( U32 fcSttbfAssoc, U32 lcbSttbfAssoc, U16 l
     tableStream->seek( fcSttbfAssoc );
     m_sttbf = new STTBF( lid, tableStream );
     if ( tableStream->tell() - fcSttbfAssoc != lcbSttbfAssoc )
-        wvlog << "Warning: Associated strings have a different size than expected!" << std::endl;
+        wvlog << __FILE__ << ":" << __LINE__ << " - " <<__FILE__ << ":" << __LINE__ << " - " << "Warning: Associated strings have a different size than expected!" << endl;
     tableStream->pop();
 }
 

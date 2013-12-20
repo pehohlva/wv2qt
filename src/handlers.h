@@ -12,7 +12,7 @@
 
    You should have received a copy of the GNU Library General Public License
    along with this library; see the file COPYING.LIB.  If not, write to
-   the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
+   the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
    Boston, MA 02111-1307, USA.
 */
 
@@ -24,6 +24,8 @@
 #include "global.h"
 #include "sharedptr.h"
 #include "functordata.h"
+#include "wv2_export.h"
+#include "word97_generated.h"
 
 namespace wvWare {
 
@@ -32,6 +34,7 @@ namespace wvWare {
     class UString;
     template<class ParserT, typename Data> class Functor;
     typedef Functor<Parser9x, HeaderData> HeaderFunctor;
+    typedef Functor<Parser9x, AnnotationData> AnnotationFunctor;
     typedef Functor<Parser9x, TableRowData> TableRowFunctor;
     typedef Functor<Parser9x, FootnoteData> FootnoteFunctor;
     typedef Functor<Parser9x, PictureData> PictureFunctor;
@@ -48,7 +51,7 @@ namespace wvWare {
      * within 7bit ASCII range, the names of the methods should be
      * descriptive enough.
      */
-    class InlineReplacementHandler
+    class WV2_EXPORT InlineReplacementHandler
     {
     public:
         virtual ~InlineReplacementHandler();
@@ -69,10 +72,16 @@ namespace wvWare {
      * This class is needed as we reuse one @ref TextHandler object for all the
      * text we find, no matter whether it's inside the main body or within a textbox.
      */
-    class WV2_DLLEXPORT SubDocumentHandler
+    class WV2_EXPORT SubDocumentHandler
     {
     public:
         virtual ~SubDocumentHandler();
+
+    /**
+     * Set the progress of WordDocument Stream processing.  All other
+     * streams (Table, Data) are referred from this one.
+     */
+        virtual void setProgress(const int percent);
 
         /**
          * This method is called as soon as you call @ref Parser::parse. It indicates
@@ -86,7 +95,7 @@ namespace wvWare {
         virtual void bodyEnd();
 
         /**
-         * Every time you invoke a @ref FoonoteFunctor this method will be called.
+         * Every time you invoke a @ref FootnoteFunctor this method will be called.
          * Note that @ref FoonoteFunctor is also emitted when we find endnotes.
          */
         virtual void footnoteStart();
@@ -94,6 +103,29 @@ namespace wvWare {
          * Once the footnote characters are processed this method is called.
          */
         virtual void footnoteEnd();
+
+        /**
+         * 2.3.4
+         *
+         * Comments/Annotations (Microsoft isn't consistent)
+         *
+         * The comment document contains all of the content in the comments/annotation. It begins at the CP
+         * immediately following the Header Document and is FibRgLw97.ccpAtn characters long.
+         * The locations of individual comments within the comment document are specified by a PlcfandTxt
+         * whose location is specified by the fcPlcfandTxt member of FibRgFcLcb97. The locations of the
+         * comment reference characters in the Main Document are specified by a PlcfandRef whose location is
+         * specified by the fcPlcfandRef member of FibRgFcLcb97.
+         *
+         * Let's see whether it makes sense when I continue implementing this...
+         */
+        /**
+         * Every time you invoke a @ref AnnotationFunctor this method will be called.
+         */
+        virtual void annotationStart();
+        /**
+         * Once the annotation characters are processed this method is called.
+         */
+        virtual void annotationEnd();
 
         /**
          * For every section in a Word document a @ref HeaderFunctor is emitted.
@@ -123,6 +155,13 @@ namespace wvWare {
          * The end of the current header or footer.
          */
         virtual void headerEnd();
+        /**
+         * This method sends a binary mask providing the information of
+         * empty/nonempty header and footer stories for each section.  Size of
+         * the list equals the number of sections present in the document.
+         */
+        virtual void headersMask(QList<bool> mask);
+
     };
 
 
@@ -143,7 +182,7 @@ namespace wvWare {
      * you get a sequence of table row functors and then suddenly a
      * paragraphStart callback, you know that the table has ended.
      */
-    class WV2_DLLEXPORT TableHandler
+    class WV2_EXPORT TableHandler
     {
     public:
         virtual ~TableHandler();
@@ -166,64 +205,28 @@ namespace wvWare {
         virtual void tableCellEnd();
     };
 
-
-    class OLEImageReader;
-
     /**
-     * The PictureHandler class is the interface for all image related
-     * callbacks. All the image data is passed to the consumer via this
-     * interface.
+     * The GraphicsHandler class is the interface for MS-ODRAW objects related
+     * callbacks.  Office Drawing Binary File Format structures are parsed by
+     * msoscheme.
      */
-    class WV2_DLLEXPORT PictureHandler
+    class WV2_EXPORT GraphicsHandler
     {
     public:
-        /**
-         * A small helper struct to express the dimensions of the passed
-         * .wmf. A dimension of 0 indicates an invalid dimension.
-         */
-        // ###### FIXME: Do we really need that?
-        /*
-        struct WMFDimensions
-        {
-            WMFDimensions( const U8* rcWinMF )
-            {
-                left = readS16( rcWinMF );
-                top = readS16( rcWinMF + 2 );
-                width = readU16( rcWinMF + 4 );
-                height = readU16( rcWinMF + 6 );
-            }
-            S16 left;
-            S16 top;
-            U16 width;
-            U16 height;
-        };
+
+        virtual ~GraphicsHandler();
+
+       /**
+        * This method gets called when a floating object is found.
+        * @param globalCP (character position)
         */
+        virtual void handleFloatingObject(unsigned int globalCP);
 
-        virtual ~PictureHandler();
-
-        /**
-         * This method is called when you invoke a PictureFunctor and the embedded
-         * image is a bitmap. The bitmap data can be accessed using the OLEImageReader.
-         * Note: The reader will only be valid until you return form that method, and
-         * don't forget that you're directly accessing little-endian image data!
-         */
-        virtual void bitmapData( OLEImageReader& reader, SharedPtr<const Word97::PICF> picf );
-        /**
-         * This method is called when the image is escher data.
-         */
-        virtual void escherData( OLEImageReader& reader, SharedPtr<const Word97::PICF> picf, int type );
-        virtual void escherData( std::vector<U8> data, SharedPtr<const Word97::PICF> picf, int type );
-        /**
-         * This method is called when you invoke a PictureFunctor and the embedded
-         * image is a .wmf file. The data can be accessed using the OLEImageReader.
-         * Note: The reader will only be valid until you return form that method, and
-         * don't forget that you're directly accessing little-endian data!
-         */
-        virtual void wmfData( OLEImageReader& reader, SharedPtr<const Word97::PICF> picf );
-        /**
-         * Word allows to store .tif, .bmp, or .gif images externally.
-         */
-        virtual void externalImage( const UString& name, SharedPtr<const Word97::PICF> picf );
+       /**
+        * This method gets called when an inline object is found.  @param data
+        * the picture properties and offset into data stream.
+        */
+	virtual QString handleInlineObject(const PictureData& data, const bool isBulletPicture = false);
     };
 
 
@@ -241,7 +244,7 @@ namespace wvWare {
      * you want to have a fast filter, try to make those methods fast, they
      * will get called very oftern.
      */
-    class WV2_DLLEXPORT TextHandler
+    class WV2_EXPORT TextHandler
     {
     public:
         virtual ~TextHandler();
@@ -269,9 +272,11 @@ namespace wvWare {
         // Paragraph related callbacks...
         /**
          * Denotes the start of a paragraph.
-         * The paragraph properties are passed in the @p paragraphProperties argument.
+         * @param paragraph properties of the paragraph.
+         * @param character properties of the paragraph provided for empty
+         * paragraphs to set correct font-size, line-height, etc.
          */
-        virtual void paragraphStart( SharedPtr<const ParagraphProperties> paragraphProperties );
+        virtual void paragraphStart( SharedPtr<const ParagraphProperties> paragraphProperties, SharedPtr<const Word97::CHP> characterProperties);
         virtual void paragraphEnd();
 
         /**
@@ -308,14 +313,21 @@ namespace wvWare {
                                 DateM = 29, DateShort = 30, MonthShort = 33,
                                 YearLong = 34, YearShort = 35,
                                 AbbreviatedMonth = 36, MonthLong = 37,
-                                CurrentTimeHMS = 38, DateLong = 39 };
+                                CurrentTimeHMS = 38, DateLong = 39, Symbol = 40};
 
         /**
          * Very special characters (bad, bad name) are the ones which need additional
-         * information from the file (i.e. the plain "put the current date there" isn't sufficent).
+         * information from the file (i.e. the plain "put the current date there" isn't sufficient).
          */
-        enum VerySpecialCharacter { Picture = 1, FootnoteAuto = 2, DrawnObject = 8, FieldBegin = 19,
-                                FieldSeparator = 20, FieldEnd = 21, FieldEscapeChar = 92 };
+        enum VerySpecialCharacter { Picture = 1, FootnoteAuto = 2, AnnotationRef = 5,
+                                    DrawnObject = 8, FieldBegin = 19,
+                                    FieldSeparator = 20, FieldEnd = 21, FieldEscapeChar = 92 };
+
+        /**
+         * special characters that were dfined in parser9x.h  (fSpec = 1) but that weren't used.
+         */
+        enum UnusedSpecialCharacter {FootnoteSeparator = 3, FootnodeContinuation = 4, HandAnnotationPic = 7,
+                                 AbbrevDate = 10, MergeHelper = 41};
 
         /**
          * This method passes the simple cases of special characters we find. More complex ones
@@ -330,8 +342,20 @@ namespace wvWare {
          * runOfText (that it doesn't get lost if someone doesn't override this method) and
          * invokes the functor.
          */
-        virtual void footnoteFound( FootnoteData::Type type, UChar character,
-                                    SharedPtr<const Word97::CHP> chp, const FootnoteFunctor& parseFootnote );
+        virtual void footnoteFound( FootnoteData data, UString characters,
+                                    SharedPtr<const Word97::SEP> sep,
+                                    SharedPtr<const Word97::CHP> chp,
+                                    const FootnoteFunctor& parseFootnote);
+
+        /**
+         * The parser found an annotation. The passed functor will trigger the parsing of this
+         * annotation, the default implementation just emits the passed character with
+         * runOfText (that it doesn't get lost if someone doesn't override this method) and
+         * invokes the functor.
+         */
+        virtual void annotationFound( UString characters,
+                                      SharedPtr<const Word97::CHP> chp, const AnnotationFunctor& parseAnnotation);
+
         /**
          * This callback will get triggered when parsing a auto-numbered footnote.
          * The passed CHP is the character formatting information provided for the
@@ -362,6 +386,24 @@ namespace wvWare {
         virtual void fieldEnd( const FLD* fld, SharedPtr<const Word97::CHP> chp );
 
         /**
+         * This method is called every time an inline or floating MS-ODRAW
+         * object is found.  If the @param data is ZERO, then it's a floating
+         * object.  Else it's an inline object.
+         *
+         * @param globalCP the CP to which the floating object is anchored
+         * @param data the inline object data as defined by functordata
+         */
+        virtual void msodrawObjectFound( const unsigned int globalCP, const PictureData* data );
+
+        /**
+         * Denotes the start of a bookmark.
+         */
+        virtual void bookmarkStart( const BookmarkData& data );
+        virtual void bookmarkEnd( const BookmarkData& data );
+
+        //NOTE: those two belong into the TableHandler !!!!!
+
+        /**
          * This method is called every time we find a table row. The default
          * implementation invokes the functor, which triggers the parsing
          * process for the given table row.
@@ -372,16 +414,11 @@ namespace wvWare {
         virtual void tableRowFound( const TableRowFunctor& tableRow, SharedPtr<const Word97::TAP> tap );
 
         /**
-         * This method is called every time we find a picture. The default
-         * implementation invokes the functor, which triggers the parsing
-         * process for the given picture.
-         * @param picf the picture properties. Those are the same as the
-         * ones you'll get when invoking the functor, but by having them here,
-         * you can do some preprocessing.
+         * This method is called every time we find a table end. No default
+         * implementation at the moment!
          */
-        virtual void pictureFound( const PictureFunctor& picture, SharedPtr<const Word97::PICF> picf,
-                                   SharedPtr<const Word97::CHP> chp );
-    };
+        virtual void tableEndFound( );
+   };
 
 } // namespace wvWare
 

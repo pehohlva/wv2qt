@@ -13,13 +13,13 @@
 
    You should have received a copy of the GNU Library General Public License
    along with this library; see the file COPYING.LIB.  If not, write to
-   the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
+   the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
    Boston, MA 02111-1307, USA.
 */
 #ifndef SharedPTR_H
 #define SharedPTR_H
 
-#include "dllmagic.h"
+#include "wv2_export.h"
 
 namespace wvWare {
 
@@ -40,7 +40,7 @@ namespace wvWare {
  *
  * @author Waldo Bastian <bastian@kde.org>
  */
-class WV2_DLLEXPORT Shared {
+class WV2_EXPORT Shared {
 public:
    /**
     * Standard constructor.  This will initialize the reference count

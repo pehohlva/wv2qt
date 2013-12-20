@@ -12,7 +12,7 @@
 
    You should have received a copy of the GNU Library General Public License
    along with this library; see the file COPYING.LIB.  If not, write to
-   the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
+   the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
    Boston, MA 02111-1307, USA.
 */
 
@@ -22,16 +22,18 @@
 #include "olestream.h"
 #include "wvlog.h"
 
+#include <map>
 #include <vector>
 #include <string.h>
 
+
 namespace wvWare
 {
-    namespace Word97 { class PHE; class BTE; }
+    namespace Word97 { struct PHE; struct BTE; }
     namespace Word95
     {
-        class PHE;
-        class BTE;
+        struct PHE;
+        struct BTE;
         Word97::PHE toWord97( const Word95::PHE& phe );  // fake, to make gcc 3.4 happy :-(
         Word97::BTE toWord97( const Word95::BTE& s );   // fake, to make gcc 3.4 happy :-(
     }
@@ -281,20 +283,20 @@ namespace wvWare
     template<class T>
     void PLCF<T>::dumpCPs() const
     {
-        wvlog << "PLCF: count=" << count() << std::endl;
+        wvlog << __FILE__ << ":" << __LINE__ << " - " <<"PLCF: count=" << count() << endl;
         std::vector<U32>::const_iterator it = m_indices.begin();
         std::vector<U32>::const_iterator end = m_indices.end();
         for ( ; it != end; ++it )
-            wvlog << "    " << ( *it ) << std::endl;
-        wvlog << "PLCF done." << std::endl;
+            wvlog << __FILE__ << ":" << __LINE__ << " - " <<"    " << ( *it ) << endl;
+        wvlog << __FILE__ << ":" << __LINE__ << " - " <<"PLCF done." << endl;
     }
 
     template<class T>
     U32 PLCF<T>::calculateCount( U32 length )
     {
         if ( ( length - 4 ) % ( T::sizeOf + 4 ) ) {
-            wvlog << "Warning: PLCF size seems to be screwed" << std::endl;
-            wvlog << "Warning: length: " << length << ", size: " << T::sizeOf << ", mod: " << ( length - 4 ) % ( T::sizeOf + 4 ) << std::endl;
+            wvlog << __FILE__ << ":" << __LINE__ << " - " <<"Warning: PLCF size seems to be screwed" << endl;
+            wvlog << __FILE__ << ":" << __LINE__ << " - " <<"Warning: length: " << length << ", size: " << T::sizeOf << ", mod: " << ( length - 4 ) % ( T::sizeOf + 4 ) << endl;
             return 0;
         }
         return ( length - 4 ) / ( T::sizeOf + 4 );
@@ -328,7 +330,7 @@ namespace wvWare
         }
 
         unsigned int count() const { return m_plcf.m_items.count(); }
-        bool isEmpty() const { return m_plcf.m_items.count() == 0; }
+        bool isEmpty() const { return m_plcf.m_items.empty(); }
 
         T* toFirst();
         T* toLast();
@@ -405,6 +407,61 @@ namespace wvWare
     }
 
 
+    template<class T> class PLCFMap
+    {
+    public:
+        PLCFMap( U32 length, OLEStreamReader *reader, bool preservePos = false );
+        ~PLCFMap();
+
+        T* item( U32 index ) const;
+    private:
+        U32 calculateCount( U32 length ) const;
+
+        std::map<U32, T*> m_items;
+    };
+
+    template<class T>
+    PLCFMap<T>::PLCFMap( U32 length, OLEStreamReader* reader, bool preservePos )
+    {
+        if ( preservePos )
+            reader->push();
+        U32 count = calculateCount( length );
+        std::vector<U32> indices;
+        for ( U32 i = 0; i < count + 1; ++i )  // n+1 CPs/FCs
+            indices.push_back( reader->readU32() );
+        for ( U32 i = 0; i < count; ++i )  // n "T"s
+            m_items.insert(std::make_pair( indices[i], new T( reader, false ) ) );
+        if ( preservePos )
+            reader->pop();
+    }
+
+    template<class T>
+    PLCFMap<T>::~PLCFMap()
+    {
+        typename std::map<U32, T*>::const_iterator it = m_items.begin();
+        for ( ; it != m_items.end(); ++it )
+            delete it->second;
+    }
+
+    template<class T>
+    T* PLCFMap<T>::item( U32 index ) const
+    {
+        typename std::map<U32, T*>::const_iterator it( m_items.find( index ) );
+        return it != m_items.end() ? it->second: 0;
+    }
+
+    template<class T>
+    U32 PLCFMap<T>::calculateCount( U32 length ) const
+    {
+        if ( ( length - 4 ) % ( T::sizeOf + 4 ) ) {
+            wvlog << __FILE__ << ":" << __LINE__ << " - " <<"Warning: PLCFMap size seems to be screwed" << endl;
+            wvlog << __FILE__ << ":" << __LINE__ << " - " <<"Warning: length: " << length << ", size: " << T::sizeOf << ", mod: " << ( length - 4 ) % ( T::sizeOf + 4 ) << endl;
+            return 0;
+        }
+        return ( length - 4 ) / ( T::sizeOf + 4 );
+    }
+
+
     template<class PHE> struct BX;
     template<class Offset> class FKP;
     template<class Offset> class FKPIterator;
@@ -444,7 +501,7 @@ namespace wvWare
         if ( preservePos )
             reader->push();
         reader->push();
-        reader->seek( 511, G_SEEK_CUR );
+        reader->seek( 511, WV2_SEEK_CUR );
         m_crun = reader->readU8();
         reader->pop();
 
@@ -532,7 +589,7 @@ namespace wvWare
         U8 index() const { return m_index; }
         void setIndex( U8 index ) { if ( index < m_fkp.m_crun ) m_index = index; }
 
-        bool atEnd() { return m_index >= m_fkp.m_crun; }
+        bool atEnd() const { return m_index >= m_fkp.m_crun; }
 
     private:
         // don't copy or assign it
@@ -555,12 +612,12 @@ namespace wvWare
             if ( tmp != 0 ) {
                 const int pos = tmp * 2 - m_fkp.m_internalOffset;
                 if ( pos < 0 ) {
-                    wvlog << "ERROR: FKP internalOffset (" << m_fkp.m_internalOffset << ") is bigger than " <<
-                        "2*" << (int)tmp << ", FKP array index would be negative!" << std::endl;
+                    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"ERROR: FKP internalOffset (" << m_fkp.m_internalOffset << ") is bigger than " <<
+                        "2*" << (int)tmp << ", FKP array index would be negative!" << endl;
                     return 0;
                 } else if ( pos >= 511 - m_fkp.m_internalOffset ) {
-                    wvlog << "ERROR: FKP array index (" << pos << " is bigger than allocated size ("
-                          << 511 - m_fkp.m_internalOffset << ")" << std::endl;
+                    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"ERROR: FKP array index (" << pos << " is bigger than allocated size ("
+                          << 511 - m_fkp.m_internalOffset << ")" << endl;
                     return 0;
                 } else {
                     return &m_fkp.m_fkp[ pos ];
@@ -639,7 +696,7 @@ namespace wvWare
         }
 
         /**
-         * Set all the fields to the inital value (default is 0)
+         * Set all the fields to the initial value (default is 0)
          */
         void clear()
         {
@@ -714,7 +771,7 @@ namespace wvWare
         bool write( OLEStreamWriter* stream, bool preservePos = false ) const;
 
         /**
-         * Set all the fields to the inital value (default is 0)
+         * Set all the fields to the initial value (default is 0)
          */
         void clear();
 

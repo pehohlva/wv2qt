@@ -12,7 +12,7 @@
 
    You should have received a copy of the GNU Library General Public License
    along with this library; see the file COPYING.LIB.  If not, write to
-   the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
+   the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
    Boston, MA 02111-1307, USA.
 */
 
@@ -22,6 +22,7 @@
 #include <algorithm>
 #include <functional> // std::unary_function is in this header with gcc 2.9x
 #include <string>
+#include "wv2_export.h"
 
 namespace wvWare
 {

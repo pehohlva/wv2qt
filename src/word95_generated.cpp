@@ -2,8 +2,10 @@
    Copyright (C) 2001 Werner Trobin <trobin@kde.org>
 
    This library is free software; you can redistribute it and/or
-   modify it under the terms of the GNU Library General Public
-   License version 2 as published by the Free Software Foundation.
+   modify it under the terms of the Library GNU General Public
+   version 2 of the License, or (at your option) version 3 or,
+   at the discretion of KDE e.V (which shall act as a proxy as in
+   section 14 of the GPLv3), any later version..
 
    This library is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -12,8 +14,8 @@
 
    You should have received a copy of the GNU Library General Public License
    along with this library; see the file COPYING.LIB.  If not, write to
-   the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-   Boston, MA 02111-1307, USA.
+   the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+   Boston, MA 02111-1301, USA.
 */
 
 // This code is generated from the Microsoft HTML specification of the
@@ -129,9 +131,9 @@ void DTTM::clear() {
 
 void DTTM::dump() const
 {
-    wvlog << "Dumping DTTM:" << std::endl;
-    wvlog << toString().c_str() << std::endl;
-    wvlog << "\nDumping DTTM done." << std::endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"Dumping DTTM:" << endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<toString().c_str() << endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"\nDumping DTTM done." << endl;
 }
 
 std::string DTTM::toString() const
@@ -385,9 +387,9 @@ void SHD::clear() {
 
 void SHD::dump() const
 {
-    wvlog << "Dumping SHD:" << std::endl;
-    wvlog << toString().c_str() << std::endl;
-    wvlog << "\nDumping SHD done." << std::endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"Dumping SHD:" << endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<toString().c_str() << endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"\nDumping SHD done." << endl;
 }
 
 std::string SHD::toString() const
@@ -512,9 +514,9 @@ void PHE::clear() {
 
 void PHE::dump() const
 {
-    wvlog << "Dumping PHE:" << std::endl;
-    wvlog << toString().c_str() << std::endl;
-    wvlog << "\nDumping PHE done." << std::endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"Dumping PHE:" << endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<toString().c_str() << endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"\nDumping PHE done." << endl;
 }
 
 std::string PHE::toString() const
@@ -641,9 +643,9 @@ void BRC::clear() {
 
 void BRC::dump() const
 {
-    wvlog << "Dumping BRC:" << std::endl;
-    wvlog << toString().c_str() << std::endl;
-    wvlog << "\nDumping BRC done." << std::endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"Dumping BRC:" << endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<toString().c_str() << endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"\nDumping BRC done." << endl;
 }
 
 std::string BRC::toString() const
@@ -797,9 +799,9 @@ void TLP::clear() {
 
 void TLP::dump() const
 {
-    wvlog << "Dumping TLP:" << std::endl;
-    wvlog << toString().c_str() << std::endl;
-    wvlog << "\nDumping TLP done." << std::endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"Dumping TLP:" << endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<toString().c_str() << endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"\nDumping TLP done." << endl;
 }
 
 std::string TLP::toString() const
@@ -946,9 +948,9 @@ void TC::clear() {
 
 void TC::dump() const
 {
-    wvlog << "Dumping TC:" << std::endl;
-    wvlog << toString().c_str() << std::endl;
-    wvlog << "\nDumping TC done." << std::endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"Dumping TC:" << endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<toString().c_str() << endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"\nDumping TC done." << endl;
 }
 
 std::string TC::toString() const
@@ -1563,9 +1565,9 @@ void TAP::clear() {
 
 void TAP::dump() const
 {
-    wvlog << "Dumping TAP:" << std::endl;
-    wvlog << toString().c_str() << std::endl;
-    wvlog << "\nDumping TAP done." << std::endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"Dumping TAP:" << endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<toString().c_str() << endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"\nDumping TAP done." << endl;
 }
 
 std::string TAP::toString() const
@@ -1917,9 +1919,9 @@ void ANLD::clear() {
 
 void ANLD::dump() const
 {
-    wvlog << "Dumping ANLD:" << std::endl;
-    wvlog << toString().c_str() << std::endl;
-    wvlog << "\nDumping ANLD done." << std::endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"Dumping ANLD:" << endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<toString().c_str() << endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"\nDumping ANLD done." << endl;
 }
 
 std::string ANLD::toString() const
@@ -2237,9 +2239,9 @@ void ANLV::clear() {
 
 void ANLV::dump() const
 {
-    wvlog << "Dumping ANLV:" << std::endl;
-    wvlog << toString().c_str() << std::endl;
-    wvlog << "\nDumping ANLV done." << std::endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"Dumping ANLV:" << endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<toString().c_str() << endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"\nDumping ANLV done." << endl;
 }
 
 std::string ANLV::toString() const
@@ -2778,9 +2780,9 @@ void CHP::clear() {
 
 void CHP::dump() const
 {
-    wvlog << "Dumping CHP:" << std::endl;
-    wvlog << toString().c_str() << std::endl;
-    wvlog << "\nDumping CHP done." << std::endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"Dumping CHP:" << endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<toString().c_str() << endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"\nDumping CHP done." << endl;
 }
 
 std::string CHP::toString() const
@@ -2994,9 +2996,9 @@ void DCS::clear() {
 
 void DCS::dump() const
 {
-    wvlog << "Dumping DCS:" << std::endl;
-    wvlog << toString().c_str() << std::endl;
-    wvlog << "\nDumping DCS done." << std::endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"Dumping DCS:" << endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<toString().c_str() << endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"\nDumping DCS done." << endl;
 }
 
 std::string DCS::toString() const
@@ -5136,9 +5138,9 @@ void LSPD::clear() {
 
 void LSPD::dump() const
 {
-    wvlog << "Dumping LSPD:" << std::endl;
-    wvlog << toString().c_str() << std::endl;
-    wvlog << "\nDumping LSPD done." << std::endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"Dumping LSPD:" << endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<toString().c_str() << endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"\nDumping LSPD done." << endl;
 }
 
 std::string LSPD::toString() const
@@ -5213,9 +5215,9 @@ void METAFILEPICT::clear() {
 
 void METAFILEPICT::dump() const
 {
-    wvlog << "Dumping METAFILEPICT:" << std::endl;
-    wvlog << toString().c_str() << std::endl;
-    wvlog << "\nDumping METAFILEPICT done." << std::endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"Dumping METAFILEPICT:" << endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<toString().c_str() << endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"\nDumping METAFILEPICT done." << endl;
 }
 
 std::string METAFILEPICT::toString() const
@@ -5392,9 +5394,9 @@ void OLST::clear() {
 
 void OLST::dump() const
 {
-    wvlog << "Dumping OLST:" << std::endl;
-    wvlog << toString().c_str() << std::endl;
-    wvlog << "\nDumping OLST done." << std::endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"Dumping OLST:" << endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<toString().c_str() << endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"\nDumping OLST done." << endl;
 }
 
 std::string OLST::toString() const
@@ -5725,9 +5727,9 @@ void PAP::clear() {
 
 void PAP::dump() const
 {
-    wvlog << "Dumping PAP:" << std::endl;
-    wvlog << toString().c_str() << std::endl;
-    wvlog << "\nDumping PAP done." << std::endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"Dumping PAP:" << endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<toString().c_str() << endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"\nDumping PAP done." << endl;
 }
 
 std::string PAP::toString() const
@@ -6335,9 +6337,9 @@ void PICF::clear() {
 
 void PICF::dump() const
 {
-    wvlog << "Dumping PICF:" << std::endl;
-    wvlog << toString().c_str() << std::endl;
-    wvlog << "\nDumping PICF done." << std::endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"Dumping PICF:" << endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<toString().c_str() << endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"\nDumping PICF done." << endl;
 }
 
 std::string PICF::toString() const
@@ -6557,8 +6559,8 @@ bool SEP::read(OLEStreamReader *stream, bool preservePos) {
     yaPage=stream->readU16();
     dxaLeft=stream->readU16();
     dxaRight=stream->readU16();
-    dyaTop=stream->readU16();
-    dyaBottom=stream->readU16();
+    dyaTop=stream->readS16();
+    dyaBottom=stream->readS16();
     dzaGutter=stream->readU16();
     dmBinFirst=stream->readU16();
     dmBinOther=stream->readU16();
@@ -6671,9 +6673,9 @@ void SEP::clear() {
 
 void SEP::dump() const
 {
-    wvlog << "Dumping SEP:" << std::endl;
-    wvlog << toString().c_str() << std::endl;
-    wvlog << "\nDumping SEP done." << std::endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"Dumping SEP:" << endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<toString().c_str() << endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"\nDumping SEP done." << endl;
 }
 
 std::string SEP::toString() const
@@ -6736,9 +6738,9 @@ std::string SEP::toString() const
     s += "\ndxaRight=";
     s += uint2string( dxaRight );
     s += "\ndyaTop=";
-    s += uint2string( dyaTop );
+    s += int2string( dyaTop );
     s += "\ndyaBottom=";
-    s += uint2string( dyaBottom );
+    s += int2string( dyaBottom );
     s += "\ndzaGutter=";
     s += uint2string( dzaGutter );
     s += "\ndmBinFirst=";

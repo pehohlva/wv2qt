@@ -32,7 +32,7 @@
 #include <string>
 #include <vector>
 
-#include <config.h>
+#include "msdoc.h"
 
 #ifdef HAVE_MEMORY_H
 #include <memory.h>

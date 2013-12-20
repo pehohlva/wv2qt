@@ -12,7 +12,7 @@
 
    You should have received a copy of the GNU Library General Public License
    along with this library; see the file COPYING.LIB.  If not, write to
-   the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
+   the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
    Boston, MA 02111-1307, USA.
 */
 
@@ -22,19 +22,8 @@
 #include <cassert>
 #include <iostream>
 #include <string>     // Make gcc 2.95.x happy
+#include "CmdDebug.h"
 
-// ...and work around gcc 2.95.x's STL problems (e.g. ostream isn't a template)
-#if defined(__GNUC__)
-#  if __GNUC__ < 3
-#    define WV2_OLD_STL_WORKAROUND 1
-#  endif
-#endif
-
-/**
- * @file A very primitve logging mechanism used to disable any
- * debug output for release builds. Use it like std::cerr, as it
- * is std::cerr (if it's enabled).
- */
 namespace wvWare
 {
 
@@ -114,5 +103,8 @@ namespace wvWare
     extern const wvlogstream wvlog;
 
 } // wvWare
+
+
+
 
 #endif // WVLOG_H

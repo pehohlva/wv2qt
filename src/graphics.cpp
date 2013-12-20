@@ -12,7 +12,7 @@
 
    You should have received a copy of the GNU Library General Public License
    along with this library; see the file COPYING.LIB.  If not, write to
-   the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
+   the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
    Boston, MA 02111-1307, USA.
 */
 
@@ -28,19 +28,19 @@ Drawings::Drawings( OLEStreamReader* table, const Word97::FIB &fib ) :
     table->push();
 
     // Don't try to read that. It will cause eye-cancer!
-    if ( fib.lcbPlcspaMom != 0 && table->seek( fib.fcPlcspaMom, G_SEEK_SET ) )
+    if ( fib.lcbPlcspaMom != 0 && table->seek( fib.fcPlcspaMom, WV2_SEEK_SET ) )
         m_plcfspaMom = new PLCF<Word97::FSPA>( fib.lcbPlcspaMom, table, false );
-    if ( fib.lcbPlcspaHdr != 0 && table->seek( fib.fcPlcspaHdr, G_SEEK_SET ) )
+    if ( fib.lcbPlcspaHdr != 0 && table->seek( fib.fcPlcspaHdr, WV2_SEEK_SET ) )
         m_plcfspaHdr = new PLCF<Word97::FSPA>( fib.lcbPlcspaHdr, table, false );
 
-    if ( fib.lcbPlcftxbxTxt != 0 && table->seek( fib.fcPlcftxbxTxt, G_SEEK_SET ) )
+    if ( fib.lcbPlcftxbxTxt != 0 && table->seek( fib.fcPlcftxbxTxt, WV2_SEEK_SET ) )
         m_plcftxbxTxt = new PLCF<Word97::FTXBXS>( fib.lcbPlcftxbxTxt, table, false );
-    if ( fib.lcbPlcfHdrtxbxTxt != 0 && table->seek( fib.fcPlcfHdrtxbxTxt, G_SEEK_SET ) )
+    if ( fib.lcbPlcfHdrtxbxTxt != 0 && table->seek( fib.fcPlcfHdrtxbxTxt, WV2_SEEK_SET ) )
         m_plcfHdrtxbxTxt = new PLCF<Word97::FTXBXS>( fib.lcbPlcfHdrtxbxTxt, table, false );
 
-    if ( fib.lcbPlcftxbxBkd != 0 && table->seek( fib.fcPlcftxbxBkd, G_SEEK_SET ) )
+    if ( fib.lcbPlcftxbxBkd != 0 && table->seek( fib.fcPlcftxbxBkd, WV2_SEEK_SET ) )
         m_plcftxbxBkd = new PLCF<Word97::BKD>( fib.lcbPlcftxbxBkd, table, false );
-    if ( fib.lcbPlcftxbxHdrBkd != 0 && table->seek( fib.fcPlcftxbxHdrBkd, G_SEEK_SET ) )
+    if ( fib.lcbPlcftxbxHdrBkd != 0 && table->seek( fib.fcPlcftxbxHdrBkd, WV2_SEEK_SET ) )
         m_plcfHdrtxbxBkd = new PLCF<Word97::BKD>( fib.lcbPlcftxbxHdrBkd, table, false );
 
     table->pop();
@@ -54,6 +54,7 @@ Drawings::~Drawings()
     delete m_plcftxbxTxt;
     delete m_plcfspaHdr;
     delete m_plcfspaMom;
+
 }
 
 EscherHeader::EscherHeader( OLEStreamReader* stream )
@@ -61,13 +62,13 @@ EscherHeader::EscherHeader( OLEStreamReader* stream )
     //read first 32 bits
     U32 shifterU32;
     shifterU32 = stream->readU32();
-    ver = shifterU32;
+    recVer = shifterU32;
     shifterU32>>=4;
-    inst = shifterU32;
+    recInstance = shifterU32;
     shifterU32>>=12;
-    fbt = shifterU32;
+    recType = shifterU32;
     //read second 32 bits
-    cbLength = stream->readU32();
+    recLen = stream->readU32();
 }
 
 EscherHeader::~EscherHeader()
@@ -77,7 +78,7 @@ EscherHeader::~EscherHeader()
 bool EscherHeader::isAtom()
 {
     //0xF in ver means it's a container
-    if( ver == 0xF  )
+    if( recVer == 0xF  )
         return false;
     else
         return true;
@@ -86,7 +87,7 @@ bool EscherHeader::isAtom()
 string EscherHeader::getRecordType()
 {
     string s;
-    switch( fbt ) {
+    switch( recType ) {
         case 0xF000:
             s = "msofbtDggContainer";
             break;
@@ -112,7 +113,7 @@ string EscherHeader::getRecordType()
             s = "msofbtSp";
             break;
         case 0xF00B:
-            s = "msofbtOPT";
+            s = "msofbtOPT";            // OfficeArtFOPT - MS-ODRAW, page 44 of 621
             break;
         case 0xF010:
             s = "msofbtClientAnchor";
@@ -147,6 +148,9 @@ string EscherHeader::getRecordType()
         case 0xF118:
             s = "msofbtRegroupItems";
             break;
+        case 0xF122:
+            s = "msofbtTerOPT";         // OfficeArtTertiaryFOPT - MS-ODRAW, page 46 of 621
+            break;
         default:
             s = "unknown";
     }
@@ -156,17 +160,23 @@ string EscherHeader::getRecordType()
 //returns size of the record NOT COUNTING the header
 int EscherHeader::recordSize()
 {
-    return static_cast<int> (cbLength);
+    return static_cast<int> (recLen);
+}
+
+// returns the record instance
+int EscherHeader::recordInstance()
+{
+    return recInstance;
 }
 
 void EscherHeader::dump()
 {
-    wvlog << "Dumping Escher header:" << std::endl;
-    wvlog << " ver = " << ver << std::endl;
-    wvlog << " inst = " << inst << std::endl;
-    wvlog << " fbt = " << fbt << std::endl;
-    wvlog << " cbLength = " << cbLength << std::endl;
-    wvlog << "Finished dumping Escher header." << std::endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"Dumping Escher header:" << endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<" recVer = " << hex << recVer << dec << endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<" recInstance = " << hex << recInstance << dec << endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<" recType = " << hex << recType << dec << endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<" recLen = " << recLen << endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"Finished dumping Escher header." << endl;
 }
 
 FBSE::FBSE( OLEStreamReader* stream )
@@ -190,19 +200,19 @@ FBSE::~FBSE()
 
 void FBSE::dump()
 {
-    wvlog << "Dumping FBSE:" << std::endl;
-    wvlog << "\tbtWin32 = " << btWin32 << std::endl;
-    wvlog << "\tbtMacOS = " << btMacOS << std::endl;
-    wvlog << "\trgbUid = " << rgbUid << std::endl;
-    wvlog << "\ttag = " << tag << std::endl;
-    wvlog << "\tsize = " << size << std::endl;
-    wvlog << "\tcRef = " << cRef << std::endl;
-    wvlog << "\tfoDelay = " << foDelay << std::endl;
-    wvlog << "\tusage = " << static_cast<int> (usage) << std::endl;
-    wvlog << "\tcbName = " << static_cast<unsigned int> (cbName) << std::endl;
-    wvlog << "\tunused2 = " << static_cast<unsigned int> (unused2) << std::endl;
-    wvlog << "\tunused3 = " << static_cast<unsigned int> (unused3) << std::endl;
-    wvlog << "Finished dumping FBSE." << std::endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"Dumping FBSE:" << endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"\tbtWin32 = " << btWin32 << endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"\tbtMacOS = " << btMacOS << endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"\trgbUid = " << rgbUid << endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"\ttag = " << tag << endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"\tsize = " << size << endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"\tcRef = " << cRef << endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"\tfoDelay = " << foDelay << endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"\tusage = " << static_cast<int> (usage) << endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"\tcbName = " << static_cast<unsigned int> (cbName) << endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"\tunused2 = " << static_cast<unsigned int> (unused2) << endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"\tunused3 = " << static_cast<unsigned int> (unused3) << endl;
+    wvlog << __FILE__ << ":" << __LINE__ << " - " <<"Finished dumping FBSE." << endl;
 }
 
 int FBSE::recordSize()
@@ -229,6 +239,11 @@ int FBSE::getNameLength()
     return static_cast<unsigned int> (cbName);
 }
 
+U8* FBSE::getRgbUid()
+{
+    return rgbUid;
+}
+
 Blip::Blip( OLEStreamReader* stream, string blipType )
 {
     m_size = 0; //just an initial value
@@ -249,7 +264,7 @@ Blip::Blip( OLEStreamReader* stream, string blipType )
         m_fFilter = 255; //test value, so we'll just initialize to this
     }
     else if( blipType.compare("EMF") == 0 || blipType.compare("WMF") == 0
-            || blipType.compare("PICT") == 0 ) 
+            || blipType.compare("PICT") == 0 )
     {
         stream->read( m_rgbUid, 16 ); //data UID
         stream->read( m_rgbUidPrimary, 16 ); //primary Uid
@@ -302,20 +317,20 @@ void Blip::dump()
 {
     if( !isCompressed() )
     {
-        wvlog << " bitmap blip:" << std::endl;
-        wvlog << " m_rgbUid = " << m_rgbUid << std::endl;
-        wvlog << " m_bTag = " << static_cast<unsigned int> (m_bTag) << std::endl;
+        wvlog << __FILE__ << ":" << __LINE__ << " - " <<" bitmap blip:" << endl;
+        wvlog << __FILE__ << ":" << __LINE__ << " - " <<" m_rgbUid = " << m_rgbUid << endl;
+        wvlog << __FILE__ << ":" << __LINE__ << " - " <<" m_bTag = " << static_cast<unsigned int> (m_bTag) << endl;
     }
-    else 
+    else
     {
-        wvlog << " metafile blip:" << std::endl;
-        wvlog << " m_rgbUid = " << m_rgbUid << std::endl;
-        wvlog << " m_cb = " << m_cb << std::endl;
-        wvlog << " m_rcBounds = " << m_rcBounds << std::endl;
-        wvlog << " m_ptSize = " << m_ptSize << std::endl;
-        wvlog << " m_cbSave = " << m_cbSave << std::endl;
-        wvlog << " m_fCompression = " << static_cast<unsigned int> (m_fCompression) << std::endl;
-        wvlog << " m_fFilter = " << static_cast<unsigned int> (m_fFilter) << std::endl;
+        wvlog << __FILE__ << ":" << __LINE__ << " - " <<" metafile blip:" << endl;
+        wvlog << __FILE__ << ":" << __LINE__ << " - " <<" m_rgbUid = " << m_rgbUid << endl;
+        wvlog << __FILE__ << ":" << __LINE__ << " - " <<" m_cb = " << m_cb << endl;
+        wvlog << __FILE__ << ":" << __LINE__ << " - " <<" m_rcBounds = " << m_rcBounds << endl;
+        wvlog << __FILE__ << ":" << __LINE__ << " - " <<" m_ptSize = " << m_ptSize << endl;
+        wvlog << __FILE__ << ":" << __LINE__ << " - " <<" m_cbSave = " << m_cbSave << endl;
+        wvlog << __FILE__ << ":" << __LINE__ << " - " <<" m_fCompression = " << static_cast<unsigned int> (m_fCompression) << endl;
+        wvlog << __FILE__ << ":" << __LINE__ << " - " <<" m_fFilter = " << static_cast<unsigned int> (m_fFilter) << endl;
     }
 }
 

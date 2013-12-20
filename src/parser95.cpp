@@ -12,7 +12,7 @@
 
    You should have received a copy of the GNU Library General Public License
    along with this library; see the file COPYING.LIB.  If not, write to
-   the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
+   the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
    Boston, MA 02111-1307, USA.
 */
 
@@ -40,5 +40,7 @@ Parser95::~Parser95()
 void Parser95::init()
 {
     if ( m_fib.ccpHdd != 0 )
-        m_headers = new Headers95( m_fib.fcPlcfhdd, m_fib.lcbPlcfhdd, m_table, m_properties->dop().grpfIhdt );
+        m_headers = new Headers95( m_fib.ccpHdd, m_fib.fcPlcfhdd, m_fib.lcbPlcfhdd,
+                                   m_fib.fcPlcfsed, m_fib.lcbPlcfsed,
+                                   m_table, m_properties->dop().grpfIhdt );
 }
