@@ -23,6 +23,7 @@
 #include <iostream>
 #include <string>     // Make gcc 2.95.x happy
 #include "CmdDebug.h"
+#include <iconv.h>
 
 namespace wvWare
 {
