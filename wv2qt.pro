@@ -10,6 +10,8 @@ INCLUDEPATH += /opt/icon/include
 CONFIG += staticlib
 OBJECTS_DIR = _build
 
+QT       +=  core xml
+
 cache()
 LANGUAGE        = C
 DEFINES += CAT_TEXT_WORD
